@@ -11,8 +11,8 @@ function cleanPayload(body) {
     message: body.message?.trim(),
     photo: body.photo || '',
     photoPublicId: body.photoPublicId || '',
-    gallery: Array.isArray(body.gallery) ? body.gallery.slice(0, 10) : [],
-    galleryPublicIds: Array.isArray(body.galleryPublicIds) ? body.galleryPublicIds.slice(0, 10) : []
+    gallery: Array.isArray(body.gallery) ? body.gallery.slice(0, 17) : [],
+    galleryPublicIds: Array.isArray(body.galleryPublicIds) ? body.galleryPublicIds.slice(0, 17) : []
   };
 }
 

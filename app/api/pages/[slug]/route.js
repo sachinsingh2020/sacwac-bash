@@ -22,8 +22,8 @@ export async function PATCH(request, { params }) {
     const page = await BirthdayPage.findOneAndUpdate({ slug: params.slug }, {
       name: body.name?.trim(), nickname: body.nickname?.trim() || '', age: body.age?.toString().trim() || '',
       date: body.date, message: body.message?.trim(),       photo: body.photo || '', photoPublicId: body.photoPublicId || '',
-      gallery: Array.isArray(body.gallery) ? body.gallery.slice(0, 10) : [],
-      galleryPublicIds: Array.isArray(body.galleryPublicIds) ? body.galleryPublicIds.slice(0, 10) : []
+      gallery: Array.isArray(body.gallery) ? body.gallery.slice(0, 17) : [],
+      galleryPublicIds: Array.isArray(body.galleryPublicIds) ? body.galleryPublicIds.slice(0, 17) : []
     }, { new: true, runValidators: true }).lean();
     if (!page) return NextResponse.json({ error: 'Birthday page not found.' }, { status: 404 });
     return NextResponse.json({ ...page, id: page.slug });

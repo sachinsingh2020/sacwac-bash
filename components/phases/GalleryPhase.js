@@ -11,7 +11,7 @@ export default function GalleryPhase({ person, gallery }) {
         <span className="gallery-side-border gallery-side-border-left" />
         <div className="gallery-marquee">
           <div className="gallery-track">
-            {[...gallery.slice(0, 10), ...gallery.slice(0, 10)].map(
+            {[...gallery.slice(0, 17), ...gallery.slice(0, 17)].map(
               (image, index) => (
                 <div className="gallery-photo-card" key={`${image}-${index}`}>
                   <img src={image} alt="A happy memory" />
