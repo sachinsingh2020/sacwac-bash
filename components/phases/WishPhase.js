@@ -1,20 +1,27 @@
 import { useEffect, useState } from "react";
 
-export default function WishPhase({ person, fallbackPhoto }) {
+export default function WishPhase({ person, fallbackPhoto, onMessageComplete }) {
   const [isOpen, setIsOpen] = useState(false);
   const [visibleMessage, setVisibleMessage] = useState("");
   const message = person.message || "";
   useEffect(() => {
     if (!isOpen) return;
     setVisibleMessage("");
+    if (!message.length) {
+      onMessageComplete();
+      return;
+    }
     let character = 0;
     const timer = window.setInterval(() => {
       character += 1;
       setVisibleMessage(message.slice(0, character));
-      if (character >= message.length) window.clearInterval(timer);
-    }, 28);
+      if (character >= message.length) {
+        window.clearInterval(timer);
+        onMessageComplete();
+      }
+    }, 20);
     return () => window.clearInterval(timer);
-  }, [isOpen, message]);
+  }, [isOpen, message, onMessageComplete]);
   const messageWords = (person.message || "").trim().split(/\s+/).filter(Boolean).length;
   const messageLength = messageWords >= 150 ? "long-note" : "short-note";
 
@@ -40,7 +47,7 @@ export default function WishPhase({ person, fallbackPhoto }) {
           </span>
           <div className="portrait-wrap">
             <img src={person.photo || fallbackPhoto} alt={person.name} />
-            <span className="portrait-sparkle">✦</span>
+            <span className="portrait-sparkle">✦</span><span className="photo-candles" aria-hidden="true"><i /><i /><i /></span>
           </div>
           <h1>
             Happy

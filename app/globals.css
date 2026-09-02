@@ -67,3 +67,19 @@
 
 .experience .progress-dots { display: none !important; }
 
+
+/* Birthday frame for the letter portrait. */
+.wish-card .portrait-wrap{width:180px!important;height:180px!important;padding:7px;background:linear-gradient(135deg,#fff8d8,#ef9aab 35%,#d95775 65%,#ffe4a8);border:3px solid #f7c86f;border-radius:14px!important;box-shadow:0 0 0 4px #fff7ed,0 10px 20px #b45f7738;box-sizing:border-box}.wish-card .portrait-wrap img{border:3px solid #fff8ed!important;border-radius:7px!important}.photo-candles{position:absolute;z-index:5;left:50%;top:-25px;display:flex;gap:12px;transform:translateX(-50%)}.photo-candles i{position:relative;width:9px;height:27px;border-radius:3px 3px 2px 2px;background:repeating-linear-gradient(0deg,#e95f87 0 5px,#ffd27c 5px 9px);box-shadow:0 2px 3px #8d46534d}.photo-candles i:before{content:' ';position:absolute;left:2px;top:-11px;width:5px;height:10px;border-radius:50% 50% 45% 45%;background:radial-gradient(circle at 50% 75%,#fff4a5 0 25%,#ffb23e 30% 65%,#f06c49 68%);animation:photo-candle-flame .8s ease-in-out infinite alternate}.photo-candles i:nth-child(2){height:32px;transform:translateY(-5px)}.photo-candles i:nth-child(2):before{animation-delay:.2s}.photo-candles i:nth-child(3):before{animation-delay:.4s}@keyframes photo-candle-flame{to{transform:scale(1.15) rotate(3deg);filter:brightness(1.2)}}@media(max-width:800px){.wish-card .portrait-wrap{width:125px!important;height:125px!important;padding:5px}.photo-candles{top:-20px;gap:8px}.photo-candles i{width:7px;height:21px}.photo-candles i:nth-child(2){height:25px}.photo-candles i:before{left:1px;width:5px}}
+
+
+.wish-card .portrait-wrap{width:215px!important;height:215px!important}.wish-card .portrait-wrap img{width:100%;height:100%}@media(max-width:800px){.wish-card .portrait-wrap{width:150px!important;height:150px!important}}
+
+
+@media(min-width:801px){.wish-card,.wish-card.long-note{width:min(1000px,88vw)!important;box-sizing:border-box;grid-template-columns:210px minmax(0,1fr);column-gap:58px}.wish-card .portrait-wrap{width:190px!important;height:270px!important;margin-left:0;margin-right:0}.wish-card h1,.wish-card p,.wish-card .card-sign{grid-column:2}.wish-card .card-kicker{grid-column:1/-1}}
+
+
+.ah-next-balloon span{top:50%!important;left:50%!important;transform:translate(-50%,-50%)!important;font-size:18px!important;line-height:1!important;text-align:center}.ah-next-balloon:after{white-space:nowrap}@media(max-width:600px){.ah-next-balloon span{font-size:16px!important}}
+
+
+.ah-next-balloon span{top:44%!important}
+

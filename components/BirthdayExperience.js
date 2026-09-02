@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ArrowHeartPhase from "./phases/ArrowHeartPhase";
 import BalloonPhase from "./phases/BalloonPhase";
 import CakePhase from "./phases/CakePhase";
@@ -37,6 +37,7 @@ export default function BirthdayExperience({ slug }) {
   const [loading, setLoading] = useState(true);
   const [arrowReleased, setArrowReleased] = useState(false);
   const [nextBalloonPopped, setNextBalloonPopped] = useState(false);
+  const [letterComplete, setLetterComplete] = useState(false);
   const audio = useRef(null);
 
   useEffect(() => {
@@ -101,8 +102,12 @@ export default function BirthdayExperience({ slug }) {
   );
   const prev = () => setPhase((current) => Math.max(current - 1, 0));
   const next = () => setPhase((current) => Math.min(current + 1, 7));
+  const handleLetterComplete = useCallback(() => {
+    setLetterComplete(true);
+  }, []);
   useEffect(() => {
     setNextBalloonPopped(false);
+    setLetterComplete(false);
   }, [phase]);
   const popNextBalloon = () => {
     if (nextBalloonPopped) return;
@@ -175,6 +180,7 @@ export default function BirthdayExperience({ slug }) {
         <WishPhase
           person={person}
           fallbackPhoto={fallback.photo}
+          onMessageComplete={handleLetterComplete}
         />
       )}
       {phase === 3 && <GalleryPhase person={person} gallery={gallery} />}
@@ -188,7 +194,7 @@ export default function BirthdayExperience({ slug }) {
           onOpenGallery={() => setPhase(3)}
         />
       )}
-      {phase > 0 && phase < 7 && phase !== 3 && (
+      {phase > 0 && phase < 7 && phase !== 3 && (phase !== 2 || letterComplete) && (
         <button
           type="button"
           className={`ah-next-balloon shared-next-balloon ${
