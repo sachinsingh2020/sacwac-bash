@@ -27,12 +27,7 @@ function calculateAge(dateOfBirth) {
   const today = new Date();
   if (Number.isNaN(birthDate.getTime()) || birthDate > today) return '';
 
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const birthdayHasPassed =
-    today.getMonth() > birthDate.getMonth() ||
-    (today.getMonth() === birthDate.getMonth() && today.getDate() >= birthDate.getDate());
-  if (!birthdayHasPassed) age -= 1;
-  return String(Math.max(age, 0));
+  return String(today.getFullYear() - birthDate.getFullYear());
 }
 
 export default function AdminPage() {
