@@ -22,19 +22,23 @@ const starter = [{
 
 export default function AdminPage() {
   const [pages, setPages] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({ name: '', nickname: '', age: '', date: '', message: '', photo: '', photoPublicId: '', galleryText: '', galleryPublicIds: [] });
   const [uploadError, setUploadError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const fileInput = useRef(null);
 
   useEffect(() => {
     fetch('/api/pages')
       .then((response) => response.ok ? response.json() : Promise.reject(new Error('Database unavailable')))
       .then((stored) => setPages(stored.length ? stored : starter))
-      .catch((error) => { console.error('Unable to load birthday pages:', error); setPages(starter); });
+      .catch((error) => { console.error('Unable to load birthday pages:', error); setPages(starter); })
+      .finally(() => setLoading(false));
   }, []);
 
   function edit(page) {
@@ -42,11 +46,17 @@ export default function AdminPage() {
     setForm({ ...page, galleryText: (page.gallery || []).join('\n'), galleryPublicIds: page.galleryPublicIds || [] });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-  async function remove(id) {
-    if (!confirm('Delete this birthday page?')) return;
-    const response = await fetch(`/api/pages/${id}`, { method: 'DELETE' });
-    if (!response.ok) { setUploadError('Could not delete this page.'); return; }
-    setPages(pages.filter((page) => page.id !== id));
+  function remove(id) {
+    setConfirmDelete(id);
+  }
+  async function confirmRemove() {
+    if (!confirmDelete) return;
+    setConfirmDelete(null);
+    setDeleting(true);
+    const response = await fetch('/api/pages/' + confirmDelete, { method: 'DELETE' });
+    if (!response.ok) { setUploadError('Could not delete this page.'); setDeleting(false); return; }
+    setPages(pages.filter((page) => page.id !== confirmDelete));
+    setDeleting(false);
   }
   async function save(event) {
     event.preventDefault();
@@ -119,7 +129,9 @@ export default function AdminPage() {
     update('galleryPublicIds', publicIds);
   }
 
-  return <main className="admin-shell">
+  if (loading) return <main className="loading-screen"><div className="birthday-loader" role="status" aria-live="polite"><span className="loader-ring" /><strong>Loading your pages</strong><small>preparing your celebrations...</small></div></main>;
+
+  return <>{confirmDelete && <div className="delete-modal-backdrop" role="dialog" aria-modal="true"><div className="delete-modal"><div className="delete-modal-icon">?</div><h2>Are you sure?</h2><p>Are you sure you want to delete this birthday page?</p><div className="delete-modal-actions"><button type="button" className="text-btn" onClick={() => setConfirmDelete(null)}>Cancel</button><button type="button" className="delete-confirm-btn" onClick={confirmRemove}>Delete page</button></div></div></div>}{deleting && <main className="loading-screen"><div className="birthday-loader" role="status" aria-live="polite"><span className="loader-ring" /><strong>Deleting page</strong><small>clearing this celebration...</small></div></main>}<main className="admin-shell">
     {uploading && <div className="upload-overlay" role="status" aria-live="polite"><div className="upload-modal"><div className="upload-spinner" /><strong>Uploading image</strong><span>Please wait while your image is being uploaded</span><div className="upload-progress-label"><span>Upload progress</span><strong>{uploadProgress}%</strong></div><div className="progress-track"><span style={{ width: `${uploadProgress}%` }} /></div></div></div>}
     <aside className="sidebar">
       <div className="brand"><span className="brand-mark">✦</span><span>birthday<span className="rose">bloom</span></span></div>
@@ -153,5 +165,5 @@ export default function AdminPage() {
       </div>
       <footer className="admin-footer"><span>♪ Background music: add your file to <code>public/music/birthday.mp3</code></span><span>Built for the people worth celebrating.</span></footer>
     </section>
-  </main>;
+  </main></>;
 }
