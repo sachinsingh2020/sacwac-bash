@@ -6,6 +6,7 @@ import { compressImage } from "../../lib/compressImage";
 import ImageCropperModal from "./ImageCropperModal";
 import BirthdayExperience from "../../components/BirthdayExperience";
 import RazorpayCheckoutModal from "../../components/RazorpayCheckoutModal";
+import { getBirthdayTargetInfo } from "../../lib/birthdayCountdown";
 import "./wizard.css";
 
 const SAMPLE_MESSAGES = [
@@ -1002,6 +1003,39 @@ export default function BirthdayCreateWizard() {
                 </button>
               </div>
             </div>
+
+            {/* Countdown Notice if Birthday is in the future */}
+            {(() => {
+              const info = getBirthdayTargetInfo(formData);
+              if (!info || !info.isLocked) return null;
+              return (
+                <div
+                  className="final-countdown-card"
+                  style={{
+                    width: "100%",
+                    background: "linear-gradient(135deg, #fff7f9 0%, #fff0f3 100%)",
+                    border: "1.5px dashed #f5a9bc",
+                    borderRadius: "16px",
+                    padding: "16px 18px",
+                    margin: "18px 0 6px",
+                    textAlign: "left",
+                    display: "flex",
+                    gap: "14px",
+                    alignItems: "flex-start",
+                  }}
+                >
+                  <span style={{ fontSize: "28px", lineHeight: 1 }}>⏳</span>
+                  <div>
+                    <strong style={{ display: "block", color: "#612f3e", fontSize: "14px", marginBottom: "4px" }}>
+                      Birthday Countdown Ready!
+                    </strong>
+                    <p style={{ margin: 0, fontSize: "12.5px", lineHeight: "1.5", color: "#7a505e" }}>
+                      Since {formData.name || "the recipient"}&apos;s birthday is on <strong>{info.formattedDate}</strong>, the live countdown will start <strong>1 hour before</strong> their birthday (at 11:00 PM on {info.countdownStartsDate}). The full celebration surprise unlocks automatically at 12:00 AM Midnight on their special day!
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Direct Action Buttons: WhatsApp & View Live */}
             <div className="final-share-actions-row">

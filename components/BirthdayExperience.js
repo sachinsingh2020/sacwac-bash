@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import QuestionTeaserPhase from "./phases/QuestionTeaserPhase";
 import ArrowHeartPhase from "./phases/ArrowHeartPhase";
 import BalloonPhase from "./phases/BalloonPhase";
 import StarRevealPhase from "./phases/StarRevealPhase";
@@ -9,6 +10,8 @@ import GalleryPhase from "./phases/GalleryPhase";
 import HeartTreePhase from "./phases/HeartTreePhase";
 import WishPhase from "./phases/WishPhase";
 import CelebrationEndPhase from "./phases/CelebrationEndPhase";
+import BirthdayCountdown from "./BirthdayCountdown";
+import { getBirthdayTargetInfo } from "../lib/birthdayCountdown";
 
 const fallback = {
   name: "Satwika",
@@ -62,7 +65,12 @@ export default function BirthdayExperience({
   const [letterComplete, setLetterComplete] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [unlockedManually, setUnlockedManually] = useState(false);
+  const [previewShowCelebration, setPreviewShowCelebration] = useState(false);
   const audio = useRef(null);
+
+  const countdownInfo = useMemo(() => getBirthdayTargetInfo(person), [person]);
+  const isLocked = countdownInfo.isLocked && !unlockedManually;
 
   useEffect(() => {
     if (previewData) {
@@ -158,7 +166,7 @@ export default function BirthdayExperience({
   }, []);
 
   const prev = () => setPhase((current) => Math.max(current - 1, 0));
-  const next = () => setPhase((current) => Math.min(current + 1, 6));
+  const next = () => setPhase((current) => Math.min(current + 1, 7));
   const handleLetterComplete = useCallback(() => {
     setLetterComplete(true);
   }, []);
@@ -218,8 +226,64 @@ export default function BirthdayExperience({
     `Hey ${person.name || "there"}! 🎂 I made something special just for you. Open this to see your birthday surprise: ${shareUrl}`,
   )}`;
 
+  if (isLocked && (!isPreview || !previewShowCelebration)) {
+    return (
+      <>
+        <audio
+          ref={audio}
+          src="/music/birthday.mp3"
+          loop
+          autoPlay
+          preload="auto"
+        />
+        <BirthdayCountdown
+          person={person}
+          onUnlock={() => setUnlockedManually(true)}
+          isPreview={isPreview}
+          onPreviewCelebration={() => {
+            if (isPreview) {
+              setPreviewShowCelebration(true);
+            } else {
+              setUnlockedManually(true);
+            }
+          }}
+          sound={sound}
+          onToggleSound={() => setSound(!sound)}
+        />
+      </>
+    );
+  }
+
   return (
     <>
+      {unlockedManually && countdownInfo.isLocked && !isPreview && (
+        <button
+          type="button"
+          onClick={() => setUnlockedManually(false)}
+          style={{
+            position: "fixed",
+            top: "16px",
+            right: "16px",
+            zIndex: 999,
+            background: "rgba(255, 255, 255, 0.94)",
+            backdropFilter: "blur(10px)",
+            border: "1px solid #f9cbd5",
+            color: "#d95775",
+            borderRadius: "999px",
+            padding: "8px 16px",
+            fontSize: "12px",
+            fontWeight: 700,
+            boxShadow: "0 6px 20px rgba(217, 87, 117, 0.2)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+          }}
+          title="Return to the countdown screen"
+        >
+          <span>⏳</span> Return to Countdown
+        </button>
+      )}
       <main className={`experience phase-${phase} ${isPreview ? "has-preview-bar is-preview-mode" : ""}`}>
         {isPreview && (
           <aside className="preview-top-bar" role="banner" aria-label="Preview toolbar">
@@ -242,6 +306,18 @@ export default function BirthdayExperience({
             </div>
 
             <div className="preview-bar-actions">
+              {countdownInfo.isLocked && (
+                <button
+                  type="button"
+                  className="preview-bar-btn-sound is-on"
+                  onClick={() => setPreviewShowCelebration(false)}
+                  title="Switch to countdown screen preview"
+                  aria-label="View countdown screen preview"
+                >
+                  <span className="preview-sound-icon">⏳</span>
+                  <span className="preview-sound-label">Countdown</span>
+                </button>
+              )}
               <button
                 type="button"
                 className={`preview-bar-btn-sound ${sound ? "is-on" : "is-off"}`}
@@ -308,6 +384,12 @@ export default function BirthdayExperience({
           </button>
         )}
         {phase === 0 && (
+          <QuestionTeaserPhase
+            person={person}
+            onYes={() => setPhase(1)}
+          />
+        )}
+        {phase === 1 && (
           <ArrowHeartPhase
             person={person}
             arrowReleased={arrowReleased}
@@ -316,39 +398,39 @@ export default function BirthdayExperience({
             nextBalloonPopped={nextBalloonPopped}
           />
         )}
-        {phase === 1 && (
+        {phase === 2 && (
           <HeartTreePhase
             person={person}
             onComplete={() => setTreeComplete(true)}
           />
         )}
-        {phase === 2 && (
+        {phase === 3 && (
           <CakePhase
             person={person}
             onComplete={() => setCakeComplete(true)}
           />
         )}
-        {phase === 3 && (
+        {phase === 4 && (
           <StarRevealPhase
             popped={popped}
             onPop={pop}
             reasons={person.reasons || fallback.reasons}
           />
         )}
-        {phase === 4 && (
+        {phase === 5 && (
           <WishPhase
             person={person}
             fallbackPhoto={fallback.photo}
             onMessageComplete={handleLetterComplete}
           />
         )}
-        {phase === 5 && (
+        {phase === 6 && (
           <GalleryPhase
             person={person}
             gallery={gallery}
           />
         )}
-        {phase === 6 && (
+        {phase === 7 && (
           <CelebrationEndPhase
             person={person}
             onReplay={() => {
@@ -359,12 +441,12 @@ export default function BirthdayExperience({
             onShare={() => setShowShareModal(true)}
           />
         )}
-        {phase > 0 &&
-          phase < 6 &&
-          (phase !== 1 || treeComplete) &&
-          (phase !== 2 || cakeComplete) &&
-          (phase !== 3 || popped.length === 5) &&
-          (phase !== 4 || letterComplete) && (
+        {phase > 1 &&
+          phase < 7 &&
+          (phase !== 2 || treeComplete) &&
+          (phase !== 3 || cakeComplete) &&
+          (phase !== 4 || popped.length === 5) &&
+          (phase !== 5 || letterComplete) && (
             <button
               type="button"
               className={`ah-next-balloon shared-next-balloon ${
@@ -381,14 +463,14 @@ export default function BirthdayExperience({
               <em className="balloon-piece piece-four" />
             </button>
           )}
-        {phase >= 0 && phase < 7 && (
+        {phase > 0 && phase < 8 && (
           <div className="progress-dots">
-            {[0, 1, 2, 3, 4, 5, 6].map((dot) => (
+            {[1, 2, 3, 4, 5, 6, 7].map((dot) => (
               <i className={phase >= dot ? "active" : ""} key={dot} />
             ))}
           </div>
         )}
-        {phase >= 0 && phase <= 6 && (
+        {phase > 0 && phase <= 7 && (
           <div
             style={{
               position: "fixed",
@@ -402,11 +484,11 @@ export default function BirthdayExperience({
             <button
               type="button"
               onClick={prev}
-              disabled={phase === 0}
+              disabled={phase === 1}
               style={{
                 border: "1px solid rgba(122, 87, 95, 0.35)",
                 background:
-                  phase === 0
+                  phase === 1
                     ? "rgba(255, 255, 255, 0.5)"
                     : "rgba(255, 255, 255, 0.82)",
                 color: "#6e4f59",
@@ -416,8 +498,8 @@ export default function BirthdayExperience({
                 letterSpacing: "0.18em",
                 textTransform: "uppercase",
                 padding: "12px 18px",
-                cursor: phase === 0 ? "not-allowed" : "pointer",
-                opacity: phase === 0 ? 0.5 : 1,
+                cursor: phase === 1 ? "not-allowed" : "pointer",
+                opacity: phase === 1 ? 0.5 : 1,
                 boxShadow: "0 10px 28px rgba(127, 85, 95, 0.12)",
                 backdropFilter: "blur(8px)",
               }}>
@@ -426,10 +508,10 @@ export default function BirthdayExperience({
             <button
               type="button"
               onClick={next}
-              disabled={phase === 6}
+              disabled={phase === 7}
               style={{
                 border: "1px solid #d95775",
-                background: phase === 6 ? "rgba(217, 87, 117, 0.4)" : "#d95775",
+                background: phase === 7 ? "rgba(217, 87, 117, 0.4)" : "#d95775",
                 color: "#fff",
                 borderRadius: "999px",
                 fontSize: "11px",
@@ -437,11 +519,11 @@ export default function BirthdayExperience({
                 letterSpacing: "0.18em",
                 textTransform: "uppercase",
                 padding: "12px 18px",
-                cursor: phase === 6 ? "not-allowed" : "pointer",
+                cursor: phase === 7 ? "not-allowed" : "pointer",
                 boxShadow: "0 10px 28px rgba(217, 87, 117, 0.22)",
                 backdropFilter: "blur(8px)",
               }}>
-              {phase === 6 ? "Done" : "Next"}
+              {phase === 7 ? "Done" : "Next"}
             </button>
           </div>
         )}

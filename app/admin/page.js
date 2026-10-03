@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import VisitorAnalyticsView from "../../components/admin/VisitorAnalyticsView";
 
 const starter = [
   {
@@ -438,6 +439,12 @@ export default function AdminPage() {
             onClick={() => setActiveTab("confession")}>
             <span>💌</span> Love Confessions
           </button>
+          <button
+            type="button"
+            className={`side-link ${activeTab === "analytics" ? "active" : ""}`}
+            onClick={() => setActiveTab("analytics")}>
+            <span>📊</span> Visitor Analytics
+          </button>
           <div className="side-note">
             Manage and craft interactive celebrations across all Magic Moments services.
           </div>
@@ -454,12 +461,14 @@ export default function AdminPage() {
                 {activeTab === "anniversary" && "Anniversary Experiences"}
                 {activeTab === "friendship" && "Friendship Fiesta"}
                 {activeTab === "confession" && "Love Confessions"}
+                {activeTab === "analytics" && "Visitor Analytics & Traffic"}
               </h1>
               <p className="muted">
                 {activeTab === "birthday" && "Design a little universe for someone special."}
                 {activeTab === "anniversary" && "Celebrate relationship milestones with story walks and vaults."}
                 {activeTab === "friendship" && "Roast, toast, and honor your lifelong best friends."}
                 {activeTab === "confession" && "Unfold emotional cinematic letters to say what you truly feel."}
+                {activeTab === "analytics" && "Inspect who visits each link, detailed IP, geolocation, device logs, and multi-period metrics."}
               </p>
             </div>
             <div className="header-chip">
@@ -467,6 +476,8 @@ export default function AdminPage() {
               <span>
                 {activeTab === "birthday"
                   ? `${pages.length} ${pages.length === 1 ? "story" : "stories"} live`
+                  : activeTab === "analytics"
+                  ? "Live Visitor Tracking 🟢"
                   : "Coming Soon ✨"}
               </span>
             </div>
@@ -481,6 +492,14 @@ export default function AdminPage() {
               <span>🎂</span>
               <span>Birthdays</span>
               <span className="admin-tab-count">{pages.length}</span>
+            </button>
+            <button
+              type="button"
+              className={`admin-tab-btn ${activeTab === "analytics" ? "active" : ""}`}
+              onClick={() => setActiveTab("analytics")}>
+              <span>📊</span>
+              <span>Visitor Analytics</span>
+              <span className="admin-tab-badge" style={{ background: "#e8f7ee", color: "#2ea76b" }}>Live</span>
             </button>
             <button
               type="button"
@@ -814,6 +833,11 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+
+        {activeTab === "analytics" && (
+          <VisitorAnalyticsView adminToken={adminToken} />
+        )}
+
           <footer className="admin-footer">
             <span>
               ♪ Background music: add your file to{" "}
