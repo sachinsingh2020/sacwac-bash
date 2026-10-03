@@ -1241,8 +1241,283 @@
   height: 100vh;
   height: 100svh;
   z-index: 99999;
-  background: var(--cream, #fffaf5);
+  background: radial-gradient(circle at 50% 25%, #291724 0%, #170d14 55%, #0d060b 100%);
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
+  user-select: none;
+}
+
+/* Studio Top Header Bar */
+.preview-studio-header {
+  position: relative;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 24px;
+  background: rgba(22, 12, 18, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+  flex-shrink: 0;
+}
+
+.preview-studio-btn-back {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 7px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.preview-studio-btn-back:hover {
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateX(-2px);
+}
+
+.preview-studio-device-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  color: #fce2e8;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.preview-badge-live-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2ea76b;
+  box-shadow: 0 0 10px #2ea76b;
+  animation: pulseDot 2s infinite ease-in-out;
+}
+
+.preview-studio-btn-publish {
+  background: linear-gradient(135deg, #ff577d, #d95775);
+  border: none;
+  color: #fff;
+  padding: 8px 22px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(217, 87, 117, 0.5);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.preview-studio-btn-publish:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(217, 87, 117, 0.65);
+}
+
+/* Studio Canvas / Stage */
+.preview-studio-stage {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px 14px;
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Realistic Smartphone Device Chassis */
+.preview-phone-device {
+  position: relative;
+  height: min(780px, calc(100vh - 84px));
+  aspect-ratio: 390 / 844;
+  max-width: min(390px, 94vw);
+  background: #1b1218;
+  border-radius: 48px;
+  padding: 10px;
+  box-sizing: border-box;
+  box-shadow:
+    0 0 0 3px #3c2633,
+    0 0 0 6px rgba(255, 255, 255, 0.12),
+    0 24px 60px rgba(0, 0, 0, 0.65),
+    0 4px 16px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+  contain: layout;
+}
+
+/* Dynamic Island / Notch */
+.preview-phone-island {
+  position: absolute;
+  top: 17px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 92px;
+  height: 22px;
+  background: #000;
+  border-radius: 18px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 9px;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.preview-phone-camera {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #1d3656 0%, #0c1520 70%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Inner Mobile Screen Frame */
+.preview-phone-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 38px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #fffaf5;
+  display: flex;
+  flex-direction: column;
+  -webkit-overflow-scrolling: touch;
+  isolation: isolate;
+}
+
+/* Sleek scrollbar for the phone screen */
+.preview-phone-screen::-webkit-scrollbar {
+  width: 4px;
+}
+.preview-phone-screen::-webkit-scrollbar-thumb {
+  background: rgba(217, 87, 117, 0.35);
+  border-radius: 4px;
+}
+
+/* Bottom Home Bar */
+.preview-phone-home-bar {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 110px;
+  height: 4.5px;
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 10px;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+/* Inside the mobile phone frame: ensure all scenes fit 100% without overflowing or getting cut off */
+.preview-phone-screen .experience {
+  height: 100% !important;
+  min-height: 100% !important;
+  max-height: 100% !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+.preview-phone-screen .preview-top-bar {
+  display: none !important;
+}
+
+.preview-phone-screen .ah-interactive-scene,
+.preview-phone-screen .heart-tree-scene,
+.preview-phone-screen .qt-scene {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  max-height: 100% !important;
+  position: absolute !important;
+  inset: 0 !important;
+}
+
+.preview-phone-screen .bday-countdown-overlay {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 100% !important;
+  height: 100% !important;
+  padding: 34px 12px 20px !important;
+  overflow-y: auto !important;
+}
+
+.preview-phone-screen .bday-countdown-card {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 22px 14px 18px !important;
+  border-radius: 24px !important;
+  margin: auto !important;
+}
+
+.preview-phone-screen .qt-card {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 28px 16px 20px !important;
+  border-radius: 24px !important;
+  margin: auto !important;
+}
+
+.preview-phone-screen .qt-main-headline {
+  font-size: 19px !important;
+  line-height: 1.25 !important;
+}
+
+.preview-phone-screen .qt-question-text {
+  font-size: 13.5px !important;
+}
+
+/* Mobile responsive fallback: On real mobile phones, remove the phone chassis bezel */
+@media (max-width: 520px) {
+  .preview-studio-header {
+    padding: 8px 12px;
+  }
+  .preview-studio-btn-back {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  .preview-studio-device-badge {
+    display: none;
+  }
+  .preview-studio-btn-publish {
+    padding: 6px 14px;
+    font-size: 12px;
+  }
+  .preview-studio-stage {
+    padding: 0;
+  }
+  .preview-phone-device {
+    height: 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    aspect-ratio: unset !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+  .preview-phone-screen {
+    border-radius: 0 !important;
+  }
+  .preview-phone-island,
+  .preview-phone-home-bar {
+    display: none !important;
+  }
 }
 
 /* Floating Top Preview Toolbar */

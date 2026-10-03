@@ -467,46 +467,95 @@ export default function BirthdayCreateWizard() {
     <main className="wizard-page">
       <div className="wizard-ambient" />
 
-      {/* Fullscreen In-Page Preview Mode (Option 1: In-Memory, URL stays /create, No slug generated) */}
+      {/* Studio Mobile Device Preview Modal */}
       {isPreviewMode && (
-        <div className="wizard-inpage-preview-portal">
-          <BirthdayExperience
-            isPreview={true}
-            previewData={{
-              name: formData.name.trim() || "Sunena",
-              nickname: formData.nickname.trim() || formData.name.trim() || "Sunny",
-              dob: formData.dob,
-              age: formData.age.trim() || "26",
-              date: formData.dob || new Date().toISOString().split("T")[0],
-              message:
-                formData.message.trim() ||
-                "You make ordinary days feel like tiny celebrations. Today, the whole world gets to celebrate you.",
-              reasons:
-                formData.reasons.map((r) => r.trim()).filter(Boolean).length > 0
-                  ? formData.reasons.map((r) => r.trim()).filter(Boolean)
-                  : [
-                      "Your laugh is my favourite sound",
-                      "The world is kinder with you in it",
-                      "You make ordinary days magic",
-                    ],
-              photo:
-                formData.photo ||
-                "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=85",
-              gallery:
-                formData.gallery.length > 0
-                  ? formData.gallery
-                  : [
-                      "photo-1516589178581-6cd7833ae3b2",
-                      "photo-1529156069898-49953e39b3ac",
-                      "photo-1506869640319-fe1a24fd76dc",
-                    ],
-            }}
-            onExitPreview={() => setIsPreviewMode(false)}
-            onPublish={handleOpenCheckout}
-            isPublishing={loading}
-            publishError={publishError}
-            onClearPublishError={() => setPublishError("")}
-          />
+        <div className="wizard-inpage-preview-portal" role="dialog" aria-modal="true">
+          {/* Studio Top Control Bar */}
+          <header className="preview-studio-header">
+            <div className="preview-studio-left">
+              <button
+                type="button"
+                className="preview-studio-btn-back"
+                onClick={() => setIsPreviewMode(false)}
+                title="Return to the editor"
+              >
+                ← Back to Edit
+              </button>
+            </div>
+
+            <div className="preview-studio-center">
+              <span className="preview-studio-device-badge">
+                <span className="preview-badge-live-pulse" />
+                📱 Mobile Screen Preview (What your recipient sees)
+              </span>
+            </div>
+
+            <div className="preview-studio-right">
+              <button
+                type="button"
+                className="preview-studio-btn-publish"
+                onClick={handleOpenCheckout}
+                disabled={loading}
+                title="Unlock celebration and generate official link"
+              >
+                {loading ? "Unlocking... ✨" : "Unlock & Share Link 🚀"}
+              </button>
+            </div>
+          </header>
+
+          {/* Studio Stage with Realistic Inner Mobile Screen Mockup */}
+          <div className="preview-studio-stage">
+            <div className="preview-phone-device">
+              {/* Phone Physical Elements */}
+              <div className="preview-phone-island">
+                <span className="preview-phone-camera" />
+              </div>
+
+              {/* Inner Mobile Screen Frame */}
+              <div className="preview-phone-screen">
+                <BirthdayExperience
+                  isPreview={true}
+                  previewData={{
+                    name: formData.name.trim() || "Sunena",
+                    nickname: formData.nickname.trim() || formData.name.trim() || "Sunny",
+                    dob: formData.dob,
+                    age: formData.age.trim() || "26",
+                    date: formData.dob || new Date().toISOString().split("T")[0],
+                    message:
+                      formData.message.trim() ||
+                      "You make ordinary days feel like tiny celebrations. Today, the whole world gets to celebrate you.",
+                    reasons:
+                      formData.reasons.map((r) => r.trim()).filter(Boolean).length > 0
+                        ? formData.reasons.map((r) => r.trim()).filter(Boolean)
+                        : [
+                            "Your laugh is my favourite sound",
+                            "The world is kinder with you in it",
+                            "You make ordinary days magic",
+                          ],
+                    photo:
+                      formData.photo ||
+                      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=85",
+                    gallery:
+                      formData.gallery.length > 0
+                        ? formData.gallery
+                        : [
+                            "photo-1516589178581-6cd7833ae3b2",
+                            "photo-1529156069898-49953e39b3ac",
+                            "photo-1506869640319-fe1a24fd76dc",
+                          ],
+                  }}
+                  onExitPreview={() => setIsPreviewMode(false)}
+                  onPublish={handleOpenCheckout}
+                  isPublishing={loading}
+                  publishError={publishError}
+                  onClearPublishError={() => setPublishError("")}
+                />
+              </div>
+
+              {/* Bottom Home Indicator Bar */}
+              <div className="preview-phone-home-bar" />
+            </div>
+          </div>
         </div>
       )}
 
