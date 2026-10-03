@@ -6,9 +6,9 @@ import VisitorAnalyticsView from "../../components/admin/VisitorAnalyticsView";
 
 const starter = [
   {
-    id: "satwika2343",
-    name: "Satwika",
-    nickname: "Saturday",
+    id: "sunena2343",
+    name: "Sunena",
+    nickname: "Sunny",
     age: "26",
     date: "2026-09-05",
     message:
@@ -547,7 +547,7 @@ export default function AdminPage() {
                       required
                       value={form.name}
                       onChange={(e) => update("name", e.target.value)}
-                      placeholder="e.g. Satwika"
+                      placeholder="e.g. Sunena"
                     />
                   </label>
                   <label>
@@ -555,7 +555,7 @@ export default function AdminPage() {
                     <input
                       value={form.nickname}
                       onChange={(e) => update("nickname", e.target.value)}
-                      placeholder="e.g. Saturday"
+                      placeholder="e.g. Sunny"
                     />
                   </label>
                 </div>

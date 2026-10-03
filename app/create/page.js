@@ -473,8 +473,8 @@ export default function BirthdayCreateWizard() {
           <BirthdayExperience
             isPreview={true}
             previewData={{
-              name: formData.name.trim() || "Satwika",
-              nickname: formData.nickname.trim() || formData.name.trim() || "Saturday",
+              name: formData.name.trim() || "Sunena",
+              nickname: formData.nickname.trim() || formData.name.trim() || "Sunny",
               dob: formData.dob,
               age: formData.age.trim() || "26",
               date: formData.dob || new Date().toISOString().split("T")[0],
@@ -614,7 +614,7 @@ export default function BirthdayCreateWizard() {
               <input
                 type="text"
                 className="wizard-input"
-                placeholder="e.g. Satwika, Rohit, Sneha"
+                placeholder="e.g. Sunena, Rohit, Sneha"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
@@ -628,7 +628,7 @@ export default function BirthdayCreateWizard() {
               <input
                 type="text"
                 className="wizard-input"
-                placeholder="e.g. Saturday, Rancho, Chotu"
+                placeholder="e.g. Sunny, Rancho, Chotu"
                 value={formData.nickname}
                 onChange={(e) =>
                   setFormData({ ...formData, nickname: e.target.value })

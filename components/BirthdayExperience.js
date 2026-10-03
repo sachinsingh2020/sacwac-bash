@@ -14,8 +14,8 @@ import BirthdayCountdown from "./BirthdayCountdown";
 import { getBirthdayTargetInfo } from "../lib/birthdayCountdown";
 
 const fallback = {
-  name: "Satwika",
-  nickname: "Saturday",
+  name: "Sunena",
+  nickname: "Sunny",
   age: "26",
   message:
     "You make ordinary days feel like tiny celebrations. Today, the whole world gets to celebrate you.",
