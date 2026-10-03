@@ -436,19 +436,39 @@ export default function VisitorAnalyticsView({ adminToken }) {
                     <span>{selectedRecord.ip}</span>
                   </div>
                   <div className="analytics-detail-item">
+                    <label>Location Permission</label>
+                    <span>
+                      {selectedRecord.locationPermission === "granted" ? (
+                        <span style={{ color: "#2ea76b", fontWeight: 600 }}>
+                          ✅ Granted by Visitor (Exact GPS)
+                        </span>
+                      ) : selectedRecord.locationPermission === "denied" ? (
+                        <span style={{ color: "#d95775", fontWeight: 600 }}>
+                          ❌ Denied by Visitor
+                        </span>
+                      ) : selectedRecord.locationPermission === "prompted" ? (
+                        <span style={{ color: "#e67e22", fontWeight: 600 }}>
+                          ⏳ Prompt Pending / Dismissed
+                        </span>
+                      ) : (
+                        <span style={{ color: "#8a757e" }}>Not Provided</span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="analytics-detail-item">
                     <label>City & Region</label>
                     <span>
-                      {selectedRecord.city && selectedRecord.city !== "Unknown" && selectedRecord.city !== "Localhost"
-                        ? `${selectedRecord.city}, ${selectedRecord.region}`
-                        : "Location not captured"}
+                      {selectedRecord.city && selectedRecord.city !== "Unknown" && selectedRecord.city !== "Localhost" && selectedRecord.city !== "Location not found"
+                        ? `${selectedRecord.city}${selectedRecord.region ? `, ${selectedRecord.region}` : ""}`
+                        : "Location not found"}
                     </span>
                   </div>
                   <div className="analytics-detail-item">
                     <label>Country</label>
                     <span>
-                      {selectedRecord.country && selectedRecord.country !== "Unknown" && selectedRecord.country !== "Local Network"
+                      {selectedRecord.country && selectedRecord.country !== "Unknown" && selectedRecord.country !== "Local Network" && selectedRecord.country !== "Location not found"
                         ? `${getCountryFlag(selectedRecord.countryCode)} ${selectedRecord.country} (${selectedRecord.countryCode || "N/A"})`
-                        : "Location not captured"}
+                        : "Location not found"}
                     </span>
                   </div>
                   <div className="analytics-detail-item">
@@ -478,7 +498,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
                         </span>
                       ) : (
                         <span style={{ color: "#8a757e", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "5px" }}>
-                          <span>⚠️</span> Location not captured
+                          <span>⚠️</span> Location not found
                         </span>
                       )}
                     </span>

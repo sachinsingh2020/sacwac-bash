@@ -16,6 +16,7 @@ const visitorLogSchema = new mongoose.Schema(
     longitude: { type: Number, default: null },
     isExactGps: { type: Boolean, default: false },
     locationCaptured: { type: Boolean, default: false },
+    locationPermission: { type: String, default: 'unknown' },
     timezone: { type: String, default: '' },
     isp: { type: String, default: '' },
     browser: { type: String, default: 'Unknown' },
@@ -34,4 +35,8 @@ const visitorLogSchema = new mongoose.Schema(
 visitorLogSchema.index({ createdAt: -1 });
 visitorLogSchema.index({ slug: 1, createdAt: -1 });
 
-export default mongoose.models.VisitorLog || mongoose.model('VisitorLog', visitorLogSchema);
+if (mongoose.models && mongoose.models.VisitorLog) {
+  delete mongoose.models.VisitorLog;
+}
+
+export default mongoose.model('VisitorLog', visitorLogSchema);

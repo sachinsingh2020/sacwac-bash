@@ -170,6 +170,7 @@ export async function GET(request) {
         longitude: log.isExactGps ? log.longitude : null,
         isExactGps: Boolean(log.isExactGps),
         locationCaptured: Boolean(log.locationCaptured || log.isExactGps),
+        locationPermission: log.locationPermission || (log.isExactGps ? 'granted' : 'unknown'),
         timezone: log.timezone || '',
         isp: log.isp || 'Unknown',
         browser: log.browser || 'Unknown',

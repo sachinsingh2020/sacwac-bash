@@ -39,7 +39,10 @@ export default function TrackVisit({ slug = "" }) {
     if (lastTrackedRef.current === key) return;
     lastTrackedRef.current = key;
 
+    let beaconSent = false;
+
     const sendBeacon = (extra = {}) => {
+      beaconSent = true;
       const payload = {
         slug: resolvedSlug,
         pageTitle: document.title || "",
@@ -51,6 +54,7 @@ export default function TrackVisit({ slug = "" }) {
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "",
         latitude: null,
         longitude: null,
+        locationPermission: "unknown",
         ...extra,
       };
 
@@ -64,28 +68,76 @@ export default function TrackVisit({ slug = "" }) {
       });
     };
 
-    if (typeof navigator !== "undefined" && navigator.geolocation && navigator.permissions?.query) {
-      navigator.permissions
-        .query({ name: "geolocation" })
-        .then((permission) => {
-          if (permission.state === "granted") {
-            navigator.geolocation.getCurrentPosition(
-              (pos) => {
-                sendBeacon({
-                  latitude: pos.coords.latitude,
-                  longitude: pos.coords.longitude,
-                });
-              },
-              () => sendBeacon({ latitude: null, longitude: null }),
-              { timeout: 3500, maximumAge: 60000 }
+    // If geolocation is supported, trigger the browser permission prompt immediately
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      // Safety timeout: if visitor ignores the prompt dialog for > 5 seconds, send initial visit log
+      const pendingTimer = setTimeout(() => {
+        if (!beaconSent) {
+          sendBeacon({ locationPermission: "prompted" });
+        }
+      }, 5000);
+
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          clearTimeout(pendingTimer);
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+
+          // Attempt fast reverse-geocoding of accurate device coordinates
+          let geoDetails = {};
+          try {
+            const controller = new AbortController();
+            const tid = setTimeout(() => controller.abort(), 2500);
+            const res = await fetch(
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`,
+              { signal: controller.signal }
             );
-            return;
+            clearTimeout(tid);
+            if (res.ok) {
+              const data = await res.json();
+              geoDetails = {
+                gpsCity: data.city || data.locality || "",
+                gpsRegion: data.principalSubdivision || "",
+                gpsCountry: data.countryName || "",
+                gpsCountryCode: data.countryCode || "",
+                gpsPostal: data.postcode || "",
+              };
+            }
+          } catch {
+            // Geocode failed or timed out, coordinates are still captured
           }
-          sendBeacon({ latitude: null, longitude: null });
-        })
-        .catch(() => sendBeacon({ latitude: null, longitude: null }));
+
+          sendBeacon({
+            latitude: lat,
+            longitude: lon,
+            isExactGps: true,
+            locationPermission: "granted",
+            ...geoDetails,
+          });
+        },
+        (err) => {
+          clearTimeout(pendingTimer);
+          const permissionState = err.code === 1 ? "denied" : "unavailable";
+          sendBeacon({
+            latitude: null,
+            longitude: null,
+            isExactGps: false,
+            locationPermission: permissionState,
+          });
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        }
+      );
     } else {
-      sendBeacon({ latitude: null, longitude: null });
+      sendBeacon({
+        latitude: null,
+        longitude: null,
+        isExactGps: false,
+        locationPermission: "unsupported",
+      });
     }
   }, [pathname, slug]);
 
