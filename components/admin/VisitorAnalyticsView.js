@@ -350,8 +350,11 @@ export default function VisitorAnalyticsView({ adminToken }) {
                       <div className="analytics-geo-badge">
                         <span>{getCountryFlag(r.countryCode)}</span>
                         <span>
-                          {r.city !== "Unknown" ? `${r.city}, ` : ""}
-                          {r.country}
+                          {r.city && r.city !== "Unknown" && r.city !== "Localhost"
+                            ? `${r.city}, ${r.country}`
+                            : r.country && r.country !== "Unknown" && r.country !== "Local Network"
+                            ? r.country
+                            : "Location not captured"}
                         </span>
                       </div>
                     </td>
@@ -435,34 +438,48 @@ export default function VisitorAnalyticsView({ adminToken }) {
                   <div className="analytics-detail-item">
                     <label>City & Region</label>
                     <span>
-                      {selectedRecord.city}, {selectedRecord.region}
+                      {selectedRecord.city && selectedRecord.city !== "Unknown" && selectedRecord.city !== "Localhost"
+                        ? `${selectedRecord.city}, ${selectedRecord.region}`
+                        : "Location not captured"}
                     </span>
                   </div>
                   <div className="analytics-detail-item">
                     <label>Country</label>
                     <span>
-                      {getCountryFlag(selectedRecord.countryCode)} {selectedRecord.country} (
-                      {selectedRecord.countryCode || "N/A"})
+                      {selectedRecord.country && selectedRecord.country !== "Unknown" && selectedRecord.country !== "Local Network"
+                        ? `${getCountryFlag(selectedRecord.countryCode)} ${selectedRecord.country} (${selectedRecord.countryCode || "N/A"})`
+                        : "Location not captured"}
                     </span>
                   </div>
                   <div className="analytics-detail-item">
                     <label>Postal / Zip Code</label>
-                    <span>{selectedRecord.postalCode || "N/A"}</span>
+                    <span>
+                      {selectedRecord.postalCode && selectedRecord.postalCode !== "000000"
+                        ? selectedRecord.postalCode
+                        : "Not captured"}
+                    </span>
                   </div>
                   <div className="analytics-detail-item">
                     <label>Coordinates (Lat / Long)</label>
                     <span>
-                      {selectedRecord.latitude && selectedRecord.longitude ? (
-                        <a
-                          href={`https://maps.google.com/?q=${selectedRecord.latitude},${selectedRecord.longitude}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ color: "#d95775", textDecoration: "underline" }}
-                        >
-                          {selectedRecord.latitude}, {selectedRecord.longitude} ↗
-                        </a>
+                      {selectedRecord.isExactGps && selectedRecord.latitude && selectedRecord.longitude ? (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                          <span style={{ color: "#2ea76b", fontWeight: 600 }}>
+                            📍 {selectedRecord.latitude.toFixed(5)}, {selectedRecord.longitude.toFixed(5)}
+                          </span>
+                          <a
+                            href={`https://maps.google.com/?q=${selectedRecord.latitude},${selectedRecord.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: "#d95775", textDecoration: "underline", marginLeft: "4px" }}
+                          >
+                            Open Maps ↗
+                          </a>
+                        </span>
                       ) : (
-                        "N/A"
+                        <span style={{ color: "#8a757e", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                          <span>⚠️</span> Location not captured
+                        </span>
                       )}
                     </span>
                   </div>

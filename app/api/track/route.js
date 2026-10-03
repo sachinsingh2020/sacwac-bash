@@ -31,6 +31,10 @@ export async function POST(request) {
 
     await connectToDatabase();
 
+    const clientLat = typeof body.latitude === 'number' ? body.latitude : (typeof body.clientLat === 'number' ? body.clientLat : null);
+    const clientLon = typeof body.longitude === 'number' ? body.longitude : (typeof body.clientLon === 'number' ? body.clientLon : null);
+    const hasExactGps = clientLat !== null && clientLon !== null && !isNaN(clientLat) && !isNaN(clientLon);
+
     const log = await VisitorLog.create({
       slug: slug.trim(),
       pageTitle: pageTitle.trim(),
@@ -42,8 +46,10 @@ export async function POST(request) {
       country: geo.country,
       countryCode: geo.countryCode,
       postalCode: geo.postalCode,
-      latitude: geo.latitude,
-      longitude: geo.longitude,
+      latitude: hasExactGps ? clientLat : null,
+      longitude: hasExactGps ? clientLon : null,
+      isExactGps: hasExactGps,
+      locationCaptured: hasExactGps,
       timezone: geo.timezone || clientTimezone,
       isp: geo.isp,
       browser: agent.browser,

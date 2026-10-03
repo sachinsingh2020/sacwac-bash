@@ -39,25 +39,54 @@ export default function TrackVisit({ slug = "" }) {
     if (lastTrackedRef.current === key) return;
     lastTrackedRef.current = key;
 
-    const payload = {
-      slug: resolvedSlug,
-      pageTitle: document.title || "",
-      url: currentUrl,
-      referrer: document.referrer || "Direct / Bookmark",
-      screenResolution: `${window.screen.width}x${window.screen.height}`,
-      language: navigator.language || navigator.userLanguage || "",
-      visitorId: getOrCreateVisitorId(),
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "",
+    const sendBeacon = (extra = {}) => {
+      const payload = {
+        slug: resolvedSlug,
+        pageTitle: document.title || "",
+        url: currentUrl,
+        referrer: document.referrer || "Direct / Bookmark",
+        screenResolution: `${window.screen.width}x${window.screen.height}`,
+        language: navigator.language || navigator.userLanguage || "",
+        visitorId: getOrCreateVisitorId(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "",
+        latitude: null,
+        longitude: null,
+        ...extra,
+      };
+
+      fetch("/api/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        keepalive: true,
+      }).catch((err) => {
+        console.warn("Analytics ping skipped:", err.message);
+      });
     };
 
-    fetch("/api/track", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      keepalive: true,
-    }).catch((err) => {
-      console.warn("Analytics ping skipped:", err.message);
-    });
+    if (typeof navigator !== "undefined" && navigator.geolocation && navigator.permissions?.query) {
+      navigator.permissions
+        .query({ name: "geolocation" })
+        .then((permission) => {
+          if (permission.state === "granted") {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                sendBeacon({
+                  latitude: pos.coords.latitude,
+                  longitude: pos.coords.longitude,
+                });
+              },
+              () => sendBeacon({ latitude: null, longitude: null }),
+              { timeout: 3500, maximumAge: 60000 }
+            );
+            return;
+          }
+          sendBeacon({ latitude: null, longitude: null });
+        })
+        .catch(() => sendBeacon({ latitude: null, longitude: null }));
+    } else {
+      sendBeacon({ latitude: null, longitude: null });
+    }
   }, [pathname, slug]);
 
   return null;

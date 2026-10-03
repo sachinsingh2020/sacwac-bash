@@ -14,6 +14,8 @@ const visitorLogSchema = new mongoose.Schema(
     postalCode: { type: String, default: '' },
     latitude: { type: Number, default: null },
     longitude: { type: Number, default: null },
+    isExactGps: { type: Boolean, default: false },
+    locationCaptured: { type: Boolean, default: false },
     timezone: { type: String, default: '' },
     isp: { type: String, default: '' },
     browser: { type: String, default: 'Unknown' },
