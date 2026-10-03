@@ -513,43 +513,45 @@ export default function BirthdayCreateWizard() {
 
               {/* Inner Mobile Screen Frame */}
               <div className="preview-phone-screen">
-                <BirthdayExperience
-                  isPreview={true}
-                  previewData={{
-                    name: formData.name.trim() || "Sunena",
-                    nickname: formData.nickname.trim() || formData.name.trim() || "Sunny",
-                    dob: formData.dob,
-                    age: formData.age.trim() || "26",
-                    date: formData.dob || new Date().toISOString().split("T")[0],
-                    message:
-                      formData.message.trim() ||
-                      "You make ordinary days feel like tiny celebrations. Today, the whole world gets to celebrate you.",
-                    reasons:
-                      formData.reasons.map((r) => r.trim()).filter(Boolean).length > 0
-                        ? formData.reasons.map((r) => r.trim()).filter(Boolean)
-                        : [
-                            "Your laugh is my favourite sound",
-                            "The world is kinder with you in it",
-                            "You make ordinary days magic",
-                          ],
-                    photo:
-                      formData.photo ||
-                      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=85",
-                    gallery:
-                      formData.gallery.length > 0
-                        ? formData.gallery
-                        : [
-                            "photo-1516589178581-6cd7833ae3b2",
-                            "photo-1529156069898-49953e39b3ac",
-                            "photo-1506869640319-fe1a24fd76dc",
-                          ],
-                  }}
-                  onExitPreview={() => setIsPreviewMode(false)}
-                  onPublish={handleOpenCheckout}
-                  isPublishing={loading}
-                  publishError={publishError}
-                  onClearPublishError={() => setPublishError("")}
-                />
+                <div className="preview-screen-border-frame">
+                  <BirthdayExperience
+                    isPreview={true}
+                    previewData={{
+                      name: formData.name.trim() || "Sunena",
+                      nickname: formData.nickname.trim() || formData.name.trim() || "Sunny",
+                      dob: formData.dob,
+                      age: formData.age.trim() || "26",
+                      date: formData.dob || new Date().toISOString().split("T")[0],
+                      message:
+                        formData.message.trim() ||
+                        "You make ordinary days feel like tiny celebrations. Today, the whole world gets to celebrate you.",
+                      reasons:
+                        formData.reasons.map((r) => r.trim()).filter(Boolean).length > 0
+                          ? formData.reasons.map((r) => r.trim()).filter(Boolean)
+                          : [
+                              "Your laugh is my favourite sound",
+                              "The world is kinder with you in it",
+                              "You make ordinary days magic",
+                            ],
+                      photo:
+                        formData.photo ||
+                        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=85",
+                      gallery:
+                        formData.gallery.length > 0
+                          ? formData.gallery
+                          : [
+                              "photo-1516589178581-6cd7833ae3b2",
+                              "photo-1529156069898-49953e39b3ac",
+                              "photo-1506869640319-fe1a24fd76dc",
+                            ],
+                    }}
+                    onExitPreview={() => setIsPreviewMode(false)}
+                    onPublish={handleOpenCheckout}
+                    isPublishing={loading}
+                    publishError={publishError}
+                    onClearPublishError={() => setPublishError("")}
+                  />
+                </div>
               </div>
 
               {/* Bottom Home Indicator Bar */}
