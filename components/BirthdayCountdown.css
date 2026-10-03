@@ -82,45 +82,7 @@
   }
 }
 
-/* Preview Banner for Editor */
-.bday-countdown-preview-banner {
-  position: fixed;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 50;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(217, 87, 117, 0.35);
-  box-shadow: 0 10px 30px rgba(180, 80, 110, 0.15);
-  border-radius: 999px;
-  padding: 8px 18px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 13px;
-  color: #5d3e49;
-  max-width: 90vw;
-}
 
-.bday-preview-btn-switch {
-  border: 0;
-  background: linear-gradient(135deg, #d95775, #bd3a5a);
-  color: #fff;
-  padding: 6px 14px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.bday-preview-btn-switch:hover {
-  transform: scale(1.04);
-  box-shadow: 0 4px 12px rgba(217, 87, 117, 0.3);
-}
 
 /* Main Container Card */
 .bday-countdown-card {

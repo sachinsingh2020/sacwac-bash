@@ -125,21 +125,7 @@ export default function BirthdayCountdown({
         ))}
       </div>
 
-      {/* Preview Bar Switcher (When viewed inside creator wizard preview) */}
-      {isPreview && (
-        <aside className="bday-countdown-preview-banner" role="status">
-          <span>👀 <strong>Countdown Preview:</strong> Visitors see this until birthday</span>
-          {onPreviewCelebration && (
-            <button
-              type="button"
-              className="bday-preview-btn-switch"
-              onClick={onPreviewCelebration}
-            >
-              Preview Celebration →
-            </button>
-          )}
-        </aside>
-      )}
+
 
       {/* Countdown Card */}
       <main className="bday-countdown-card">
