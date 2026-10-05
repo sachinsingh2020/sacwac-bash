@@ -467,8 +467,8 @@ export default function BirthdayCreateWizard() {
     <main className="wizard-page">
       <div className="wizard-ambient" />
 
-      {/* Live Preview Mode: Render regular full screen directly */}
-      {isPreviewMode && (
+      {/* If in preview mode, show ONLY BirthdayExperience */}
+      {isPreviewMode ? (
         <BirthdayExperience
           isPreview={true}
           previewData={{
@@ -506,18 +506,10 @@ export default function BirthdayCreateWizard() {
           publishError={publishError}
           onClearPublishError={() => setPublishError("")}
         />
-      )}
-
-      {/* Razorpay Secure Checkout Modal with Month Offer */}
-      <RazorpayCheckoutModal
-        isOpen={showCheckoutModal}
-        onClose={() => setShowCheckoutModal(false)}
-        pagePayload={checkoutPayload}
-        onPaymentSuccess={handlePaymentSuccess}
-      />
-
-      {/* Header */}
-      <header className="wizard-header">
+      ) : (
+        <>
+          {/* Header */}
+          <header className="wizard-header">
         <Link href="/" className="wizard-back-home" title="Back to Home">
           ← Back
         </Link>
@@ -1130,6 +1122,16 @@ export default function BirthdayCreateWizard() {
           </div>
         )}
       </div>
-    </main>
-  );
+
+      {/* Razorpay Secure Checkout Modal with Month Offer */}
+      <RazorpayCheckoutModal
+        isOpen={showCheckoutModal}
+        onClose={() => setShowCheckoutModal(false)}
+        pagePayload={checkoutPayload}
+        onPaymentSuccess={handlePaymentSuccess}
+      />
+    </>
+  )}
+</main>
+);
 }
