@@ -1234,9 +1234,15 @@
    Option 1: In-Page Fullscreen Preview & Final Share Hub
    ======================================================== */
 
-/* Preview Mode Styles */
-.has-preview-bar {
-  /* standard experience preview padding */
+.wizard-inpage-preview-portal {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100svh;
+  z-index: 99999;
+  background: var(--cream, #fffaf5);
+  overflow: hidden;
 }
 
 /* Floating Top Preview Toolbar */
@@ -1451,7 +1457,6 @@
 .is-preview-mode .heart-tree-text,
 .has-preview-bar .heart-tree-text {
   top: clamp(84px, 12vh, 115px) !important;
-  transform: none !important;
 }
 
 .is-preview-mode .candle-scene .top-title,

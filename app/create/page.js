@@ -69,12 +69,7 @@ export default function BirthdayCreateWizard() {
   const [errorMsg, setErrorMsg] = useState("");
   const [reasonWarning, setReasonWarning] = useState("");
   const [createdSlug, setCreatedSlug] = useState("");
-  const [isPreviewMode, setIsPreviewMode] = useState(() => {
-    if (typeof window !== "undefined") {
-      return new URLSearchParams(window.location.search).get("preview") === "1";
-    }
-    return false;
-  });
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [publishError, setPublishError] = useState("");
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -468,61 +463,60 @@ export default function BirthdayCreateWizard() {
 
   const currentWords = getWordCount(formData.message);
 
-  if (isPreviewMode) {
-    return (
-      <>
-        <BirthdayExperience
-          isPreview={true}
-          previewData={{
-            name: formData.name.trim() || "Sunena",
-            nickname: formData.nickname.trim() || formData.name.trim() || "Sunny",
-            dob: formData.dob,
-            age: formData.age.trim() || "26",
-            date: formData.dob || new Date().toISOString().split("T")[0],
-            message:
-              formData.message.trim() ||
-              "You make ordinary days feel like tiny celebrations. Today, the whole world gets to celebrate you.",
-            reasons:
-              formData.reasons.map((r) => r.trim()).filter(Boolean).length > 0
-                ? formData.reasons.map((r) => r.trim()).filter(Boolean)
-                : [
-                    "Your laugh is my favourite sound",
-                    "The world is kinder with you in it",
-                    "You make ordinary days magic",
-                  ],
-            photo:
-              formData.photo ||
-              "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=85",
-            gallery:
-              formData.gallery.length > 0
-                ? formData.gallery
-                : [
-                    "photo-1516589178581-6cd7833ae3b2",
-                    "photo-1529156069898-49953e39b3ac",
-                    "photo-1506869640319-fe1a24fd76dc",
-                  ],
-          }}
-          onExitPreview={() => setIsPreviewMode(false)}
-          onPublish={handleOpenCheckout}
-          isPublishing={loading}
-          publishError={publishError}
-          onClearPublishError={() => setPublishError("")}
-        />
-
-        {/* Razorpay Secure Checkout Modal with Month Offer */}
-        <RazorpayCheckoutModal
-          isOpen={showCheckoutModal}
-          onClose={() => setShowCheckoutModal(false)}
-          pagePayload={checkoutPayload}
-          onPaymentSuccess={handlePaymentSuccess}
-        />
-      </>
-    );
-  }
-
   return (
     <main className="wizard-page">
       <div className="wizard-ambient" />
+
+      {/* Fullscreen In-Page Preview Mode (Option 1: In-Memory, URL stays /create, No slug generated) */}
+      {isPreviewMode && (
+        <div className="wizard-inpage-preview-portal">
+          <BirthdayExperience
+            isPreview={true}
+            previewData={{
+              name: formData.name.trim() || "Sunena",
+              nickname: formData.nickname.trim() || formData.name.trim() || "Sunny",
+              dob: formData.dob,
+              age: formData.age.trim() || "26",
+              date: formData.dob || new Date().toISOString().split("T")[0],
+              message:
+                formData.message.trim() ||
+                "You make ordinary days feel like tiny celebrations. Today, the whole world gets to celebrate you.",
+              reasons:
+                formData.reasons.map((r) => r.trim()).filter(Boolean).length > 0
+                  ? formData.reasons.map((r) => r.trim()).filter(Boolean)
+                  : [
+                      "Your laugh is my favourite sound",
+                      "The world is kinder with you in it",
+                      "You make ordinary days magic",
+                    ],
+              photo:
+                formData.photo ||
+                "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=85",
+              gallery:
+                formData.gallery.length > 0
+                  ? formData.gallery
+                  : [
+                      "photo-1516589178581-6cd7833ae3b2",
+                      "photo-1529156069898-49953e39b3ac",
+                      "photo-1506869640319-fe1a24fd76dc",
+                    ],
+            }}
+            onExitPreview={() => setIsPreviewMode(false)}
+            onPublish={handleOpenCheckout}
+            isPublishing={loading}
+            publishError={publishError}
+            onClearPublishError={() => setPublishError("")}
+          />
+        </div>
+      )}
+
+      {/* Razorpay Secure Checkout Modal with Month Offer */}
+      <RazorpayCheckoutModal
+        isOpen={showCheckoutModal}
+        onClose={() => setShowCheckoutModal(false)}
+        pagePayload={checkoutPayload}
+        onPaymentSuccess={handlePaymentSuccess}
+      />
 
       {/* Header */}
       <header className="wizard-header">
@@ -1138,14 +1132,6 @@ export default function BirthdayCreateWizard() {
           </div>
         )}
       </div>
-
-      {/* Razorpay Secure Checkout Modal with Month Offer */}
-      <RazorpayCheckoutModal
-        isOpen={showCheckoutModal}
-        onClose={() => setShowCheckoutModal(false)}
-        pagePayload={checkoutPayload}
-        onPaymentSuccess={handlePaymentSuccess}
-      />
     </main>
   );
 }
