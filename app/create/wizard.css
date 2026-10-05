@@ -1403,18 +1403,21 @@
 /* Framed Preview Box with Border & Small Margin */
 .preview-screen-border-frame {
   position: relative;
-  margin: 6px;
-  width: calc(100% - 12px);
-  height: calc(100% - 12px);
-  border: 2px solid rgba(217, 87, 117, 0.42);
-  border-radius: 34px;
+  margin: 8px auto;
+  width: calc(100% - 16px);
+  height: calc(100% - 16px);
+  border: 3px solid #d95775;
+  border-radius: 32px;
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   background: var(--cream, #fffaf5);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7), inset 0 0 16px rgba(217, 87, 117, 0.08);
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.95),
+    0 0 22px rgba(217, 87, 117, 0.35),
+    0 12px 35px rgba(180, 80, 105, 0.25);
   -webkit-overflow-scrolling: touch;
 }
 
@@ -1536,16 +1539,22 @@
     border-radius: 0 !important;
     box-shadow: none !important;
     padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
   }
   .preview-phone-screen {
     border-radius: 0 !important;
+    background: transparent !important;
   }
   .preview-screen-border-frame {
-    margin: 4px !important;
-    width: calc(100% - 8px) !important;
-    height: calc(100% - 8px) !important;
-    border-radius: 20px !important;
-    border-width: 1.5px !important;
+    margin: 8px auto !important;
+    width: calc(100% - 16px) !important;
+    height: calc(100% - 16px) !important;
+    border-radius: 24px !important;
+    border: 3px solid #d95775 !important;
+    box-shadow:
+      0 0 0 2px rgba(255, 255, 255, 0.95),
+      0 0 16px rgba(217, 87, 117, 0.35) !important;
   }
   .preview-phone-island,
   .preview-phone-home-bar {

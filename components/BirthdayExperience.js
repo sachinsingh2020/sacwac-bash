@@ -254,8 +254,11 @@ export default function BirthdayExperience({
     );
   }
 
+  const isPreviewModeActive = Boolean(isPreview || (unlockedManually && countdownInfo.isLocked));
+
   return (
-    <>
+    <div className={`bday-preview-wrapper ${isPreviewModeActive ? "in-preview-mode" : ""}`}>
+      <div className={`bday-preview-bordered-container ${isPreviewModeActive ? "has-border-frame" : ""}`}>
       {((unlockedManually && !isPreview) || (isPreview && previewShowCelebration && countdownInfo.isLocked)) && (
         <button
           type="button"
@@ -609,6 +612,7 @@ export default function BirthdayExperience({
           </div>
         </div>
       )}
-    </>
+      </div>
+    </div>
   );
 }
