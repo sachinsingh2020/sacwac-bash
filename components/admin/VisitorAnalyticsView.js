@@ -8,7 +8,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
   const [data, setData] = useState({
     summary: { today: 0, uniqueToday: 0, thisWeek: 0, thisMonth: 0, thisYear: 0, total: 0, uniqueTotal: 0 },
     customDate: null,
-    breakdowns: { devices: [], browsers: [], countries: [] },
+    breakdowns: { devices: [], browsers: [] },
     availableSlugs: [],
     records: [],
   });
@@ -50,8 +50,6 @@ export default function VisitorAnalyticsView({ adminToken }) {
     const q = searchQuery.toLowerCase();
     return (data.records || []).filter((r) =>
       (r.ip && r.ip.toLowerCase().includes(q)) ||
-      (r.city && r.city.toLowerCase().includes(q)) ||
-      (r.country && r.country.toLowerCase().includes(q)) ||
       (r.slug && r.slug.toLowerCase().includes(q)) ||
       (r.browser && r.browser.toLowerCase().includes(q)) ||
       (r.os && r.os.toLowerCase().includes(q)) ||
@@ -85,43 +83,33 @@ export default function VisitorAnalyticsView({ adminToken }) {
     }
   };
 
-  const getCountryFlag = (code) => {
-    if (!code || code.length !== 2 || code === "LOC") return "🌐";
-    try {
-      const codePoints = code
-        .toUpperCase()
-        .split("")
-        .map((char) => 127397 + char.charCodeAt(0));
-      return String.fromCodePoint(...codePoints);
-    } catch {
-      return "🌐";
-    }
-  };
-
   return (
     <div className="analytics-container">
       {/* Header & Controls */}
       <div className="analytics-header-row">
         <div>
           <h2>📊 Real-Time Visitor Analytics</h2>
-          <p>Comprehensive tracking of all incoming visits, geolocation, devices, and link traffic.</p>
+          <p>Comprehensive tracking of all incoming visits, devices, and link traffic.</p>
         </div>
 
         <div className="analytics-controls">
-          {/* Slug Filter */}
-          <select
-            className="analytics-select"
-            value={selectedSlug}
-            onChange={(e) => setSelectedSlug(e.target.value)}
-            aria-label="Filter by link"
-          >
-            <option value="all">All Pages & Links</option>
-            {(data.availableSlugs || []).map((s) => (
-              <option key={s} value={s}>
-                /{s}
-              </option>
-            ))}
-          </select>
+          {/* Link / Slug selector */}
+          <div className="analytics-filter-group">
+            <label htmlFor="analytics-slug-select">Celebration Link:</label>
+            <select
+              id="analytics-slug-select"
+              value={selectedSlug}
+              onChange={(e) => setSelectedSlug(e.target.value)}
+              className="analytics-select"
+            >
+              <option value="all">🌐 All Celebrations & Landing Page</option>
+              {(data.availableSlugs || []).map((slug) => (
+                <option key={slug} value={slug}>
+                  /{slug}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* Refresh Button */}
           <button
@@ -129,111 +117,120 @@ export default function VisitorAnalyticsView({ adminToken }) {
             className="analytics-refresh-btn"
             onClick={fetchAnalytics}
             disabled={loading}
+            title="Refresh visitor metrics"
           >
-            <span>{loading ? "🔄" : "⚡"}</span>
-            <span>Refresh</span>
+            {loading ? "Refreshing..." : "↻ Refresh"}
           </button>
         </div>
       </div>
 
-      {/* Multiple Counts Grid (Today, This Week, This Month, This Year, All-time, Unique) */}
-      <div className="analytics-stat-grid">
-        <div className="analytics-stat-card highlight-card">
-          <span className="analytics-stat-icon">📅</span>
-          <span className="analytics-stat-label">Today's Visits</span>
-          <span className="analytics-stat-val">{data.summary?.today || 0}</span>
-          <span className="analytics-stat-sub">
-            {data.summary?.uniqueToday || 0} unique visitors
-          </span>
-        </div>
-
-        <div className="analytics-stat-card">
-          <span className="analytics-stat-icon">📈</span>
-          <span className="analytics-stat-label">This Week</span>
-          <span className="analytics-stat-val">{data.summary?.thisWeek || 0}</span>
-          <span className="analytics-stat-sub">Past 7 days</span>
-        </div>
-
-        <div className="analytics-stat-card">
-          <span className="analytics-stat-icon">📆</span>
-          <span className="analytics-stat-label">This Month</span>
-          <span className="analytics-stat-val">{data.summary?.thisMonth || 0}</span>
-          <span className="analytics-stat-sub">Current month</span>
-        </div>
-
-        <div className="analytics-stat-card">
-          <span className="analytics-stat-icon">🗓️</span>
-          <span className="analytics-stat-label">This Year</span>
-          <span className="analytics-stat-val">{data.summary?.thisYear || 0}</span>
-          <span className="analytics-stat-sub">Current calendar year</span>
-        </div>
-
-        <div className="analytics-stat-card">
-          <span className="analytics-stat-icon">🌐</span>
-          <span className="analytics-stat-label">All-Time Total</span>
-          <span className="analytics-stat-val">{data.summary?.total || 0}</span>
-          <span className="analytics-stat-sub">Total pageviews</span>
-        </div>
-
-        <div className="analytics-stat-card">
-          <span className="analytics-stat-icon">👤</span>
-          <span className="analytics-stat-label">Unique Visitors</span>
-          <span className="analytics-stat-val">{data.summary?.uniqueTotal || 0}</span>
-          <span className="analytics-stat-sub">Distinct devices</span>
-        </div>
-      </div>
-
-      {/* Custom Date Inspection Tool */}
-      <div className="analytics-custom-date-box">
-        <div className="analytics-custom-left">
-          <div className="analytics-custom-icon">🔍</div>
-          <div>
-            <h3 className="analytics-custom-title">Check Custom Date Visits</h3>
-            <p className="analytics-custom-desc">
-              Select any specific day to see how many people opened links on that exact date.
-            </p>
+      {/* Main Counter Cards */}
+      <div className="analytics-stats-grid">
+        <div className="analytics-stat-card card-today">
+          <div className="analytics-stat-icon">⚡</div>
+          <div className="analytics-stat-body">
+            <span className="analytics-stat-label">Today&apos;s Visits</span>
+            <div className="analytics-stat-value">{data.summary?.today || 0}</div>
+            <span className="analytics-stat-sub">
+              {data.summary?.uniqueToday || 0} unique today
+            </span>
           </div>
         </div>
 
-        <div className="analytics-custom-right">
-          <input
-            type="date"
-            className="analytics-date-input"
-            value={customDate}
-            onChange={(e) => setCustomDate(e.target.value)}
-            aria-label="Pick custom date"
-          />
+        <div className="analytics-stat-card card-week">
+          <div className="analytics-stat-icon">📅</div>
+          <div className="analytics-stat-body">
+            <span className="analytics-stat-label">This Week</span>
+            <div className="analytics-stat-value">{data.summary?.thisWeek || 0}</div>
+            <span className="analytics-stat-sub">Rolling week total</span>
+          </div>
+        </div>
 
-          {data.customDate && (
-            <div className="analytics-custom-result-badge">
-              <span>{data.customDate.formatted}:</span>
-              <strong>{data.customDate.count} visits</strong>
-              <small>({data.customDate.uniqueVisitors} unique)</small>
-            </div>
-          )}
+        <div className="analytics-stat-card card-month">
+          <div className="analytics-stat-icon">🗓️</div>
+          <div className="analytics-stat-body">
+            <span className="analytics-stat-label">This Month</span>
+            <div className="analytics-stat-value">{data.summary?.thisMonth || 0}</div>
+            <span className="analytics-stat-sub">Current calendar month</span>
+          </div>
+        </div>
 
-          {customDate && (
-            <button
-              type="button"
-              className="analytics-clear-filter-btn"
-              onClick={() => setCustomDate("")}
-            >
-              Clear Date Filter
-            </button>
-          )}
+        <div className="analytics-stat-card card-year">
+          <div className="analytics-stat-icon">✨</div>
+          <div className="analytics-stat-body">
+            <span className="analytics-stat-label">This Year</span>
+            <div className="analytics-stat-value">{data.summary?.thisYear || 0}</div>
+            <span className="analytics-stat-sub">Full year visits</span>
+          </div>
+        </div>
+
+        <div className="analytics-stat-card card-alltime">
+          <div className="analytics-stat-icon">🚀</div>
+          <div className="analytics-stat-body">
+            <span className="analytics-stat-label">All-Time Total</span>
+            <div className="analytics-stat-value">{data.summary?.total || 0}</div>
+            <span className="analytics-stat-sub">
+              {data.summary?.uniqueTotal || 0} unique visitors
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Breakdowns Row (Devices, Browsers, Countries) */}
-      <div className="analytics-breakdown-row">
+      {/* Custom Date Filter Section */}
+      <div className="analytics-custom-date-box">
+        <div className="analytics-custom-date-header">
+          <div>
+            <h3>📅 Inspect Custom Date Traffic</h3>
+            <p>Select any specific day to check the exact number of people who opened your links.</p>
+          </div>
+          <div className="analytics-custom-date-inputs">
+            <input
+              type="date"
+              className="analytics-date-picker"
+              value={customDate}
+              onChange={(e) => setCustomDate(e.target.value)}
+            />
+            {customDate && (
+              <button
+                type="button"
+                className="analytics-date-clear-btn"
+                onClick={() => setCustomDate("")}
+              >
+                Clear Date
+              </button>
+            )}
+          </div>
+        </div>
+
+        {customDate && data.customDate && (
+          <div className="analytics-custom-date-result">
+            <div className="analytics-custom-result-pill">
+              <span>Date:</span> <strong>{data.customDate.formatted || customDate}</strong>
+            </div>
+            <div className="analytics-custom-result-pill highlight">
+              <span>Visits on this day:</span>{" "}
+              <strong>{data.customDate.count} visits</strong>
+            </div>
+            <div className="analytics-custom-result-pill">
+              <span>Unique visitors:</span>{" "}
+              <strong>{data.customDate.uniqueVisitors} unique</strong>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Breakdowns Row (Devices & Browsers) */}
+      <div className="analytics-breakdowns-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
         {/* Top Devices */}
         <div className="analytics-breakdown-card">
-          <h4 className="analytics-breakdown-title">📱 Visitor Devices</h4>
+          <h4 className="analytics-breakdown-title">📱 Device Breakdown</h4>
           <div className="analytics-breakdown-items">
             {(data.breakdowns?.devices || []).length > 0 ? (
               data.breakdowns.devices.map((d) => (
                 <span key={d.name} className="analytics-pill-item">
-                  <span>{d.name === "Mobile" ? "📱" : d.name === "Tablet" ? "📟" : "💻"}</span>
+                  <span>
+                    {d.name === "Mobile" ? "📱" : d.name === "Tablet" ? "📟" : "💻"}
+                  </span>
                   <span>{d.name}</span>
                   <strong>{d.count}</strong>
                 </span>
@@ -246,7 +243,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
 
         {/* Top Browsers */}
         <div className="analytics-breakdown-card">
-          <h4 className="analytics-breakdown-title">🌐 Top Browsers</h4>
+          <h4 className="analytics-breakdown-title">🌐 Browsers</h4>
           <div className="analytics-breakdown-items">
             {(data.breakdowns?.browsers || []).length > 0 ? (
               data.breakdowns.browsers.map((b) => (
@@ -258,24 +255,6 @@ export default function VisitorAnalyticsView({ adminToken }) {
               ))
             ) : (
               <span className="muted">No browser data yet</span>
-            )}
-          </div>
-        </div>
-
-        {/* Top Countries */}
-        <div className="analytics-breakdown-card">
-          <h4 className="analytics-breakdown-title">📍 Top Locations</h4>
-          <div className="analytics-breakdown-items">
-            {(data.breakdowns?.countries || []).length > 0 ? (
-              data.breakdowns.countries.map((c) => (
-                <span key={c.name} className="analytics-pill-item">
-                  <span>{getCountryFlag(c.countryCode)}</span>
-                  <span>{c.name}</span>
-                  <strong>{c.count}</strong>
-                </span>
-              ))
-            ) : (
-              <span className="muted">No location data yet</span>
             )}
           </div>
         </div>
@@ -292,7 +271,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
           <input
             type="text"
             className="analytics-search-input"
-            placeholder="Search IP, City, Link, OS..."
+            placeholder="Search IP, Link, Browser, OS..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -312,7 +291,6 @@ export default function VisitorAnalyticsView({ adminToken }) {
                   <th>Timestamp</th>
                   <th>Page / Link</th>
                   <th>IP Address</th>
-                  <th>Location</th>
                   <th>Device / Browser</th>
                   <th>Referrer</th>
                   <th>Action</th>
@@ -347,19 +325,6 @@ export default function VisitorAnalyticsView({ adminToken }) {
                     </td>
 
                     <td>
-                      <div className="analytics-geo-badge">
-                        <span>{getCountryFlag(r.countryCode)}</span>
-                        <span>
-                          {r.city && r.city !== "Unknown" && r.city !== "Localhost"
-                            ? `${r.city}, ${r.country}`
-                            : r.country && r.country !== "Unknown" && r.country !== "Local Network"
-                            ? r.country
-                            : "Location not captured"}
-                        </span>
-                      </div>
-                    </td>
-
-                    <td>
                       <span style={{ whiteSpace: "nowrap" }}>
                         {r.device === "Mobile" ? "📱 " : "💻 "}
                         <strong>{r.browser}</strong> on {r.os}
@@ -371,7 +336,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
                         style={{
                           fontSize: "11px",
                           color: "#8d7780",
-                          maxWidth: "130px",
+                          maxWidth: "140px",
                           display: "inline-block",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -379,17 +344,17 @@ export default function VisitorAnalyticsView({ adminToken }) {
                         }}
                         title={r.referrer}
                       >
-                        {r.referrer.replace(/^https?:\/\/(www\.)?/, "")}
+                        {r.referrer || "Direct"}
                       </span>
                     </td>
 
                     <td>
                       <button
                         type="button"
-                        className="analytics-view-btn"
+                        className="analytics-view-detail-btn"
                         onClick={() => setSelectedRecord(r)}
                       >
-                        View Full Info 🔍
+                        Inspect Details →
                       </button>
                     </td>
                   </tr>
@@ -400,23 +365,18 @@ export default function VisitorAnalyticsView({ adminToken }) {
         )}
       </div>
 
-      {/* Full Visitor Record Inspection Modal */}
+      {/* Detailed Modal Popup for Selected Visitor Record */}
       {selectedRecord && (
-        <div
-          className="analytics-modal-backdrop"
-          onClick={() => setSelectedRecord(null)}
-          role="dialog"
-          aria-modal="true"
-        >
+        <div className="analytics-modal-backdrop" onClick={() => setSelectedRecord(null)}>
           <div className="analytics-modal" onClick={(e) => e.stopPropagation()}>
             <div className="analytics-modal-header">
-              <div>
-                <h3>🔍 Full Visitor Record Information</h3>
-                <p>Recorded at {formatTimestamp(selectedRecord.createdAt)}</p>
+              <div className="analytics-modal-header-info">
+                <h3>🔍 Complete Visitor Record</h3>
+                <span className="analytics-modal-id">Record ID: {selectedRecord.id}</span>
               </div>
               <button
                 type="button"
-                className="analytics-modal-close-btn"
+                className="analytics-modal-close"
                 onClick={() => setSelectedRecord(null)}
                 aria-label="Close modal"
               >
@@ -425,10 +385,10 @@ export default function VisitorAnalyticsView({ adminToken }) {
             </div>
 
             <div className="analytics-modal-body">
-              {/* Geolocation Section */}
+              {/* Network & Navigation Context */}
               <div className="analytics-detail-section">
                 <h4 className="analytics-detail-section-title">
-                  <span>📍 Geolocation & Network</span>
+                  <span>🌐 Network & Visit Context</span>
                 </h4>
                 <div className="analytics-detail-grid">
                   <div className="analytics-detail-item">
@@ -436,80 +396,24 @@ export default function VisitorAnalyticsView({ adminToken }) {
                     <span>{selectedRecord.ip}</span>
                   </div>
                   <div className="analytics-detail-item">
-                    <label>Location Permission</label>
-                    <span>
-                      {selectedRecord.locationPermission === "granted" ? (
-                        <span style={{ color: "#2ea76b", fontWeight: 600 }}>
-                          ✅ Granted by Visitor (Exact GPS)
-                        </span>
-                      ) : selectedRecord.locationPermission === "denied" ? (
-                        <span style={{ color: "#d95775", fontWeight: 600 }}>
-                          ❌ Denied by Visitor
-                        </span>
-                      ) : selectedRecord.locationPermission === "prompted" ? (
-                        <span style={{ color: "#e67e22", fontWeight: 600 }}>
-                          ⏳ Prompt Pending / Dismissed
-                        </span>
-                      ) : (
-                        <span style={{ color: "#8a757e" }}>Not Provided</span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="analytics-detail-item">
-                    <label>City & Region</label>
-                    <span>
-                      {selectedRecord.city && selectedRecord.city !== "Unknown" && selectedRecord.city !== "Localhost" && selectedRecord.city !== "Location not found"
-                        ? `${selectedRecord.city}${selectedRecord.region ? `, ${selectedRecord.region}` : ""}`
-                        : "Location not found"}
-                    </span>
-                  </div>
-                  <div className="analytics-detail-item">
-                    <label>Country</label>
-                    <span>
-                      {selectedRecord.country && selectedRecord.country !== "Unknown" && selectedRecord.country !== "Local Network" && selectedRecord.country !== "Location not found"
-                        ? `${getCountryFlag(selectedRecord.countryCode)} ${selectedRecord.country} (${selectedRecord.countryCode || "N/A"})`
-                        : "Location not found"}
-                    </span>
-                  </div>
-                  <div className="analytics-detail-item">
-                    <label>Postal / Zip Code</label>
-                    <span>
-                      {selectedRecord.postalCode && selectedRecord.postalCode !== "000000"
-                        ? selectedRecord.postalCode
-                        : "Not captured"}
-                    </span>
-                  </div>
-                  <div className="analytics-detail-item">
-                    <label>Coordinates (Lat / Long)</label>
-                    <span>
-                      {selectedRecord.isExactGps && selectedRecord.latitude && selectedRecord.longitude ? (
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                          <span style={{ color: "#2ea76b", fontWeight: 600 }}>
-                            📍 {selectedRecord.latitude.toFixed(5)}, {selectedRecord.longitude.toFixed(5)}
-                          </span>
-                          <a
-                            href={`https://maps.google.com/?q=${selectedRecord.latitude},${selectedRecord.longitude}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ color: "#d95775", textDecoration: "underline", marginLeft: "4px" }}
-                          >
-                            Open Maps ↗
-                          </a>
-                        </span>
-                      ) : (
-                        <span style={{ color: "#8a757e", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "5px" }}>
-                          <span>⚠️</span> Location not found
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="analytics-detail-item">
-                    <label>ISP / Network Provider</label>
-                    <span>{selectedRecord.isp || "N/A"}</span>
-                  </div>
-                  <div className="analytics-detail-item">
                     <label>Timezone</label>
                     <span>{selectedRecord.timezone || "N/A"}</span>
+                  </div>
+                  <div className="analytics-detail-item">
+                    <label>Target Celebration Slug</label>
+                    <span>{selectedRecord.slug ? `/${selectedRecord.slug}` : "Landing Page (/)"}</span>
+                  </div>
+                  <div className="analytics-detail-item">
+                    <label>Full Target URL</label>
+                    <span style={{ wordBreak: "break-all" }}>{selectedRecord.url || "N/A"}</span>
+                  </div>
+                  <div className="analytics-detail-item">
+                    <label>Referrer (Where they came from)</label>
+                    <span>{selectedRecord.referrer || "Direct / Bookmark"}</span>
+                  </div>
+                  <div className="analytics-detail-item">
+                    <label>Visit Timestamp (Local / UTC)</label>
+                    <span>{formatTimestamp(selectedRecord.createdAt)}</span>
                   </div>
                 </div>
               </div>
@@ -556,31 +460,6 @@ export default function VisitorAnalyticsView({ adminToken }) {
                     <span style={{ fontSize: "11px", fontFamily: "monospace" }}>
                       {selectedRecord.visitorId || "N/A"}
                     </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Navigation & Link Details */}
-              <div className="analytics-detail-section">
-                <h4 className="analytics-detail-section-title">
-                  <span>🧭 Navigation & Link Context</span>
-                </h4>
-                <div className="analytics-detail-grid">
-                  <div className="analytics-detail-item">
-                    <label>Target Celebration Slug</label>
-                    <span>{selectedRecord.slug ? `/${selectedRecord.slug}` : "Landing Page (/)"}</span>
-                  </div>
-                  <div className="analytics-detail-item">
-                    <label>Full Target URL</label>
-                    <span style={{ wordBreak: "break-all" }}>{selectedRecord.url}</span>
-                  </div>
-                  <div className="analytics-detail-item">
-                    <label>Referrer (Where they came from)</label>
-                    <span>{selectedRecord.referrer || "Direct / Bookmark"}</span>
-                  </div>
-                  <div className="analytics-detail-item">
-                    <label>Visit Timestamp (UTC / Local)</label>
-                    <span>{formatTimestamp(selectedRecord.createdAt)}</span>
                   </div>
                 </div>
               </div>

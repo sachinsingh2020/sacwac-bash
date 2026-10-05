@@ -468,7 +468,7 @@ export default function AdminPage() {
                 {activeTab === "anniversary" && "Celebrate relationship milestones with story walks and vaults."}
                 {activeTab === "friendship" && "Roast, toast, and honor your lifelong best friends."}
                 {activeTab === "confession" && "Unfold emotional cinematic letters to say what you truly feel."}
-                {activeTab === "analytics" && "Inspect who visits each link, detailed IP, geolocation, device logs, and multi-period metrics."}
+                {activeTab === "analytics" && "Inspect who visits each link, detailed IP, device logs, and multi-period metrics."}
               </p>
             </div>
             <div className="header-chip">

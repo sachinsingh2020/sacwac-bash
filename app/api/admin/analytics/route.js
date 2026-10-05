@@ -111,7 +111,7 @@ export async function GET(request) {
       .lean();
 
     // Aggregations for charts & breakdowns
-    const [topDevices, topBrowsers, topCountries] = await Promise.all([
+    const [topDevices, topBrowsers] = await Promise.all([
       VisitorLog.aggregate([
         { $match: baseMatch },
         { $group: { _id: '$device', count: { $sum: 1 } } },
@@ -121,12 +121,6 @@ export async function GET(request) {
       VisitorLog.aggregate([
         { $match: baseMatch },
         { $group: { _id: '$browser', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-        { $limit: 6 },
-      ]),
-      VisitorLog.aggregate([
-        { $match: baseMatch },
-        { $group: { _id: '$country', count: { $sum: 1 }, countryCode: { $first: '$countryCode' } } },
         { $sort: { count: -1 } },
         { $limit: 6 },
       ]),
@@ -146,11 +140,6 @@ export async function GET(request) {
       breakdowns: {
         devices: topDevices.map((d) => ({ name: d._id || 'Unknown', count: d.count })),
         browsers: topBrowsers.map((b) => ({ name: b._id || 'Unknown', count: b.count })),
-        countries: topCountries.map((c) => ({
-          name: c._id || 'Unknown',
-          countryCode: c.countryCode || '',
-          count: c.count,
-        })),
       },
       availableSlugs: availableSlugs.filter(Boolean),
       recordsCount: logs.length,
@@ -161,18 +150,7 @@ export async function GET(request) {
         url: log.url || '',
         referrer: log.referrer || 'Direct / Bookmark',
         ip: log.ip || 'Unknown',
-        city: log.city || 'Unknown',
-        region: log.region || 'Unknown',
-        country: log.country || 'Unknown',
-        countryCode: log.countryCode || '',
-        postalCode: log.postalCode || '',
-        latitude: log.isExactGps ? log.latitude : null,
-        longitude: log.isExactGps ? log.longitude : null,
-        isExactGps: Boolean(log.isExactGps),
-        locationCaptured: Boolean(log.locationCaptured || log.isExactGps),
-        locationPermission: log.locationPermission || (log.isExactGps ? 'granted' : 'unknown'),
         timezone: log.timezone || '',
-        isp: log.isp || 'Unknown',
         browser: log.browser || 'Unknown',
         browserVersion: log.browserVersion || '',
         os: log.os || 'Unknown',
