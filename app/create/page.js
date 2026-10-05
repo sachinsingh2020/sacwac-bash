@@ -69,7 +69,12 @@ export default function BirthdayCreateWizard() {
   const [errorMsg, setErrorMsg] = useState("");
   const [reasonWarning, setReasonWarning] = useState("");
   const [createdSlug, setCreatedSlug] = useState("");
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      return new URLSearchParams(window.location.search).get("preview") === "1";
+    }
+    return false;
+  });
   const [publishError, setPublishError] = useState("");
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -463,12 +468,9 @@ export default function BirthdayCreateWizard() {
 
   const currentWords = getWordCount(formData.message);
 
-  return (
-    <main className="wizard-page">
-      <div className="wizard-ambient" />
-
-      {/* If in preview mode, show ONLY BirthdayExperience */}
-      {isPreviewMode ? (
+  if (isPreviewMode) {
+    return (
+      <>
         <BirthdayExperience
           isPreview={true}
           previewData={{
@@ -506,10 +508,24 @@ export default function BirthdayCreateWizard() {
           publishError={publishError}
           onClearPublishError={() => setPublishError("")}
         />
-      ) : (
-        <>
-          {/* Header */}
-          <header className="wizard-header">
+
+        {/* Razorpay Secure Checkout Modal with Month Offer */}
+        <RazorpayCheckoutModal
+          isOpen={showCheckoutModal}
+          onClose={() => setShowCheckoutModal(false)}
+          pagePayload={checkoutPayload}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
+      </>
+    );
+  }
+
+  return (
+    <main className="wizard-page">
+      <div className="wizard-ambient" />
+
+      {/* Header */}
+      <header className="wizard-header">
         <Link href="/" className="wizard-back-home" title="Back to Home">
           ← Back
         </Link>
@@ -1130,8 +1146,6 @@ export default function BirthdayCreateWizard() {
         pagePayload={checkoutPayload}
         onPaymentSuccess={handlePaymentSuccess}
       />
-    </>
-  )}
-</main>
-);
+    </main>
+  );
 }

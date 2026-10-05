@@ -1451,6 +1451,7 @@
 .is-preview-mode .heart-tree-text,
 .has-preview-bar .heart-tree-text {
   top: clamp(84px, 12vh, 115px) !important;
+  transform: none !important;
 }
 
 .is-preview-mode .candle-scene .top-title,
