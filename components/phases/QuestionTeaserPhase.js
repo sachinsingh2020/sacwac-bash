@@ -1,24 +1,26 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import "./QuestionTeaserPhase.css";
 
 const NO_LABELS = [
   "No 😜",
-  "Wait, really? 🥺",
   "Are you sure? 😂",
-  "Nope, can't catch me! 🏃‍♂️",
+  "Wait, really? 🥺",
   "Nice try! 🙈",
+  "Nope! 🏃‍♂️",
   "Still trying? 😜",
-  "You have to say Yes! 💕",
-  "Yes is the only way! ✨",
-  "Give up and say Yes! 🥰",
+  "Say Yes! 💕",
+  "Are you sure? 🥺",
+  "Yes is the way! ✨",
+  "Give up! 🥰",
 ];
 
 export default function QuestionTeaserPhase({ person, onYes }) {
   const [hasDodged, setHasDodged] = useState(false);
   const [dodgeCount, setDodgeCount] = useState(0);
   const [noPosition, setNoPosition] = useState({ top: "50%", left: "50%" });
+  const noButtonRef = useRef(null);
 
   // Floating background sparkles and decorative elements
   const decor = useMemo(() => {
@@ -43,24 +45,64 @@ export default function QuestionTeaserPhase({ person, onYes }) {
 
   const recipientName = person?.name?.trim() || "Special One";
 
-  // Teleports the "No" button to a random safe area on the screen
+  // Teleports the "No" button to a safe area strictly inside the phone screen
   const handleDodge = useCallback((e) => {
     if (e) {
       if (typeof e.preventDefault === "function") e.preventDefault();
       if (typeof e.stopPropagation === "function") e.stopPropagation();
     }
 
-    // Pick random percentage coordinates well within viewport bounds (12% to 82% width, 16% to 84% height)
-    const randomX = Math.floor(Math.random() * 70) + 12;
-    const randomY = Math.floor(Math.random() * 66) + 16;
+    const vw = typeof window !== "undefined" ? window.innerWidth : 360;
+    const vh = typeof window !== "undefined" ? window.innerHeight : 640;
+
+    // Measure button dimensions, or use safe fallbacks
+    const btnWidth = noButtonRef.current?.offsetWidth || 150;
+    const btnHeight = noButtonRef.current?.offsetHeight || 46;
+
+    // Safe margins from screen borders
+    const marginX = 16;
+    const minX = marginX;
+    const maxX = Math.max(minX, vw - btnWidth - marginX);
+
+    // Keep within safe vertical bounds (avoid browser address bar / notch / bottom bar)
+    const minY = Math.min(Math.floor(vh * 0.12), 70);
+    const maxY = Math.max(minY, vh - btnHeight - 65);
+
+    const randomX = Math.floor(Math.random() * (maxX - minX + 1)) + minX;
+    const randomY = Math.floor(Math.random() * (maxY - minY + 1)) + minY;
 
     setNoPosition({
-      top: `${randomY}vh`,
-      left: `${randomX}vw`,
+      top: `${randomY}px`,
+      left: `${randomX}px`,
     });
     setHasDodged(true);
     setDodgeCount((prev) => prev + 1);
   }, []);
+
+  // Ensure button stays strictly on screen if device is rotated or resized
+  useEffect(() => {
+    if (!hasDodged) return;
+    const onResize = () => {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const btnWidth = noButtonRef.current?.offsetWidth || 150;
+      const btnHeight = noButtonRef.current?.offsetHeight || 46;
+      const marginX = 16;
+      const maxX = Math.max(marginX, vw - btnWidth - marginX);
+      const maxY = Math.max(70, vh - btnHeight - 65);
+
+      setNoPosition((prev) => {
+        const curX = parseInt(prev.left, 10) || marginX;
+        const curY = parseInt(prev.top, 10) || 100;
+        return {
+          left: `${Math.min(Math.max(marginX, curX), maxX)}px`,
+          top: `${Math.min(Math.max(70, curY), maxY)}px`,
+        };
+      });
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [hasDodged]);
 
   // Text on the "No" button updates as they keep trying to click it
   const currentNoLabel = NO_LABELS[dodgeCount % NO_LABELS.length];
@@ -156,6 +198,7 @@ export default function QuestionTeaserPhase({ person, onYes }) {
 
           {/* NO Button (Runs away on hover/touch/click!) */}
           <button
+            ref={noButtonRef}
             type="button"
             className={`qt-btn-no ${hasDodged ? "is-dodging" : ""}`}
             style={
