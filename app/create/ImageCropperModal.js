@@ -45,6 +45,8 @@ export default function ImageCropperModal({
     const height = canvas.height;
 
     ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
 
     // Calculate base scale to cover viewport
     const isRotatedQuarter = rotation === 90 || rotation === 270;
@@ -145,8 +147,8 @@ export default function ImageCropperModal({
   // Wheel zoom
   const handleWheel = (e) => {
     e.preventDefault();
-    const delta = e.deltaY < 0 ? 0.1 : -0.1;
-    setZoom((prev) => Math.min(Math.max(prev + delta, 1), 3));
+    const delta = e.deltaY < 0 ? 0.05 : -0.05;
+    setZoom((prev) => Math.min(Math.max(Number((prev + delta).toFixed(2)), 0.7), 3));
   };
 
   // Perform Final Crop Export
@@ -159,6 +161,8 @@ export default function ImageCropperModal({
     exportCanvas.width = exportSize;
     exportCanvas.height = exportSize;
     const ctx = exportCanvas.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, exportSize, exportSize);
 
     const isRotatedQuarter = rotation === 90 || rotation === 270;
     const sourceW = isRotatedQuarter ? img.height : img.width;
@@ -237,9 +241,9 @@ export default function ImageCropperModal({
             <span className="cropper-ctrl-icon">🔍</span>
             <input
               type="range"
-              min="1"
+              min="0.7"
               max="3"
-              step="0.05"
+              step="0.02"
               value={zoom}
               onChange={(e) => setZoom(parseFloat(e.target.value))}
               className="cropper-zoom-slider"
