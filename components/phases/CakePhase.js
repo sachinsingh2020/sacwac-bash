@@ -22,32 +22,86 @@ export default function CakePhase({ person, onComplete }) {
       const attachAudio = (stream) => {
         streamGrabbed = stream;
         setMicEnabled(true);
-        const AudioContext =
+        const AudioContextClass =
           window.AudioContext || window.webkitAudioContext;
-        audioContextRef.current = new AudioContext();
-        analyserRef.current = audioContextRef.current.createAnalyser();
-        microphoneRef.current =
-          audioContextRef.current.createMediaStreamSource(stream);
-        microphoneRef.current.connect(analyserRef.current);
-        analyserRef.current.fftSize = 256;
+        const ctx = new AudioContextClass();
+        audioContextRef.current = ctx;
 
-        const bufferLength = analyserRef.current.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
+        // Auto-resume AudioContext on iOS/Android if started in suspended state
+        if (ctx.state === "suspended") {
+          ctx.resume().catch(() => {});
+        }
+        const ensureActive = () => {
+          if (audioContextRef.current && audioContextRef.current.state === "suspended") {
+            audioContextRef.current.resume().catch(() => {});
+          }
+        };
+        window.addEventListener("touchstart", ensureActive, { passive: true, once: true });
+        window.addEventListener("pointerdown", ensureActive, { passive: true, once: true });
+
+        analyserRef.current = ctx.createAnalyser();
+        analyserRef.current.fftSize = 256;
+        analyserRef.current.smoothingTimeConstant = 0.3; // Responsive to fast air puffs
+
+        microphoneRef.current = ctx.createMediaStreamSource(stream);
+        microphoneRef.current.connect(analyserRef.current);
+
+        const freqBins = analyserRef.current.frequencyBinCount;
+        const freqData = new Uint8Array(freqBins);
+        const timeData = new Uint8Array(freqBins);
 
         const startTime = Date.now();
+        let blowFrames = 0;
+
         const checkAudio = () => {
           if (blownOut) return;
-          analyserRef.current.getByteFrequencyData(dataArray);
-          let sum = 0;
-          for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
-          const average = sum / bufferLength;
 
-          // Allow blowout once mic detects blow
-          if (average > 38 && Date.now() - startTime > 1000) {
-            handleBlowOut();
-          } else {
-            reqRef.current = requestAnimationFrame(checkAudio);
+          // Keep audio context running
+          if (ctx.state === "suspended") {
+            ctx.resume().catch(() => {});
           }
+
+          analyserRef.current.getByteFrequencyData(freqData);
+          analyserRef.current.getByteTimeDomainData(timeData);
+
+          // 1. Low-Frequency Energy (Wind & breath turbulence: 0-600Hz)
+          const lowBins = Math.min(18, freqBins);
+          let lowSum = 0;
+          for (let i = 1; i < lowBins; i++) {
+            lowSum += freqData[i];
+          }
+          const lowAvg = lowSum / (lowBins - 1);
+
+          // 2. Time-domain amplitude displacement (direct air impact on mic diaphragm)
+          let timeDevSum = 0;
+          for (let i = 0; i < timeData.length; i++) {
+            timeDevSum += Math.abs(timeData[i] - 128);
+          }
+          const timeDevAvg = timeDevSum / timeData.length;
+
+          // 3. Overall frequency average
+          let totalSum = 0;
+          for (let i = 0; i < freqBins; i++) totalSum += freqData[i];
+          const overallAvg = totalSum / freqBins;
+
+          // Sensitive detection specifically tuned for mobile phones:
+          // A natural gentle blow produces lowAvg >= 20 or timeDevAvg >= 10
+          const isBlowingNow = lowAvg >= 20 || timeDevAvg >= 10 || overallAvg >= 18;
+
+          // Allow blowout after a brief 600ms grace period after cake builds
+          if (Date.now() - startTime > 600) {
+            if (isBlowingNow) {
+              blowFrames += 1;
+              if (blowFrames >= 2) {
+                handleBlowOut();
+                return;
+              }
+            } else {
+              blowFrames = Math.max(0, blowFrames - 1);
+            }
+          }
+
+          reqRef.current = requestAnimationFrame(checkAudio);
         };
         checkAudio();
       };
@@ -56,7 +110,14 @@ export default function CakePhase({ person, onComplete }) {
         attachAudio(window.__birthdayMicStream);
       } else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices
-          .getUserMedia({ audio: true })
+          .getUserMedia({
+            audio: {
+              echoCancellation: false,
+              noiseSuppression: false,
+              autoGainControl: false,
+            },
+          })
+          .catch(() => navigator.mediaDevices.getUserMedia({ audio: true }))
           .then((stream) => {
             window.__birthdayMicStream = stream;
             attachAudio(stream);
@@ -85,6 +146,11 @@ export default function CakePhase({ person, onComplete }) {
     if (typeof navigator !== "undefined" && navigator.vibrate) {
       try {
         navigator.vibrate([70, 50, 90, 60, 120]);
+      } catch (e) {}
+    }
+    if (typeof window !== "undefined" && window.__birthdayMicStream) {
+      try {
+        window.__birthdayMicStream.getTracks().forEach((track) => track.stop());
       } catch (e) {}
     }
     // Signal completion after candle blowout celebration fireworks have bloomed (~2.8s)

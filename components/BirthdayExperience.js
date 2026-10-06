@@ -151,7 +151,14 @@ export default function BirthdayExperience({
     const askMicEarly = () => {
       if (typeof window !== "undefined" && navigator.mediaDevices?.getUserMedia) {
         navigator.mediaDevices
-          .getUserMedia({ audio: true })
+          .getUserMedia({
+            audio: {
+              echoCancellation: false,
+              noiseSuppression: false,
+              autoGainControl: false,
+            },
+          })
+          .catch(() => navigator.mediaDevices.getUserMedia({ audio: true }))
           .then((stream) => {
             window.__birthdayMicStream = stream;
           })
