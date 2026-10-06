@@ -11,13 +11,23 @@ export default function CakePhase({ person, onComplete }) {
   const analyserRef = useRef(null);
   const microphoneRef = useRef(null);
   const reqRef = useRef(null);
+  const isBuiltRef = useRef(false);
+  const readyTimeRef = useRef(0);
 
   useEffect(() => {
     if (scene === 0) {
+      isBuiltRef.current = false;
+      readyTimeRef.current = 0;
       const t = setTimeout(() => setScene(2), 3500);
       return () => clearTimeout(t);
     } else if (scene === 2) {
-      const tBuild = setTimeout(() => setIsBuilt(true), 3500);
+      isBuiltRef.current = false;
+      readyTimeRef.current = 0;
+      const tBuild = setTimeout(() => {
+        setIsBuilt(true);
+        isBuiltRef.current = true;
+        readyTimeRef.current = Date.now();
+      }, 3500);
       let streamGrabbed = null;
       const attachAudio = (stream) => {
         streamGrabbed = stream;
@@ -50,11 +60,17 @@ export default function CakePhase({ person, onComplete }) {
         const freqData = new Uint8Array(freqBins);
         const timeData = new Uint8Array(freqBins);
 
-        const startTime = Date.now();
         let blowFrames = 0;
 
         const checkAudio = () => {
           if (blownOut) return;
+
+          // Never listen or blow out until the cake is fully assembled AND
+          // a safe grace period (1200ms) has passed so user sees the lit candle & prompt
+          if (!isBuiltRef.current || !readyTimeRef.current || Date.now() - readyTimeRef.current < 1200) {
+            reqRef.current = requestAnimationFrame(checkAudio);
+            return;
+          }
 
           // Keep audio context running
           if (ctx.state === "suspended") {
@@ -64,41 +80,48 @@ export default function CakePhase({ person, onComplete }) {
           analyserRef.current.getByteFrequencyData(freqData);
           analyserRef.current.getByteTimeDomainData(timeData);
 
-          // 1. Low-Frequency Energy (Wind & breath turbulence: 0-600Hz)
-          const lowBins = Math.min(18, freqBins);
+          // 1. Low-Frequency Energy (Wind & breath turbulence: 0-600Hz, bins 1 to 8)
+          const lowBins = Math.min(8, freqBins);
           let lowSum = 0;
           for (let i = 1; i < lowBins; i++) {
             lowSum += freqData[i];
           }
           const lowAvg = lowSum / (lowBins - 1);
 
-          // 2. Time-domain amplitude displacement (direct air impact on mic diaphragm)
+          // 2. High-Frequency Energy (Music vocals, instruments: bins 16 to 50)
+          const highStart = Math.min(16, freqBins - 1);
+          const highEnd = Math.min(50, freqBins);
+          let highSum = 0;
+          let highCount = 0;
+          for (let i = highStart; i < highEnd; i++) {
+            highSum += freqData[i];
+            highCount++;
+          }
+          const highAvg = highCount > 0 ? highSum / highCount : 0;
+
+          // 3. Time-domain amplitude displacement (direct air impact on mic diaphragm)
           let timeDevSum = 0;
           for (let i = 0; i < timeData.length; i++) {
             timeDevSum += Math.abs(timeData[i] - 128);
           }
           const timeDevAvg = timeDevSum / timeData.length;
 
-          // 3. Overall frequency average
-          let totalSum = 0;
-          for (let i = 0; i < freqBins; i++) totalSum += freqData[i];
-          const overallAvg = totalSum / freqBins;
+          // Breath turbulence detection tuned for mobile phones:
+          // A blow creates strong diaphragm displacement (timeDevAvg >= 14) and low-frequency rumble (lowAvg >= 26)
+          // that exceeds ambient musical treble (lowAvg > highAvg * 1.2), or a firm breath (timeDevAvg >= 22 && lowAvg >= 32).
+          const isBlowingNow =
+            (timeDevAvg >= 14 && lowAvg >= 26 && lowAvg > highAvg * 1.2) ||
+            (timeDevAvg >= 22 && lowAvg >= 32);
 
-          // Sensitive detection specifically tuned for mobile phones:
-          // A natural gentle blow produces lowAvg >= 20 or timeDevAvg >= 10
-          const isBlowingNow = lowAvg >= 20 || timeDevAvg >= 10 || overallAvg >= 18;
-
-          // Allow blowout after a brief 600ms grace period after cake builds
-          if (Date.now() - startTime > 600) {
-            if (isBlowingNow) {
-              blowFrames += 1;
-              if (blowFrames >= 2) {
-                handleBlowOut();
-                return;
-              }
-            } else {
-              blowFrames = Math.max(0, blowFrames - 1);
+          if (isBlowingNow) {
+            blowFrames += 1;
+            // Require sustained breath over ~100ms (6 consecutive frames) to ignore music drum beats/transients
+            if (blowFrames >= 6) {
+              handleBlowOut();
+              return;
             }
+          } else {
+            blowFrames = Math.max(0, blowFrames - 1);
           }
 
           reqRef.current = requestAnimationFrame(checkAudio);
@@ -128,6 +151,7 @@ export default function CakePhase({ person, onComplete }) {
           });
       }
       return () => {
+        clearTimeout(tBuild);
         if (reqRef.current) cancelAnimationFrame(reqRef.current);
         if (
           audioContextRef.current &&
