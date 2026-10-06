@@ -149,20 +149,24 @@ export default function BirthdayExperience({
   useEffect(() => {
     // Early mic request as requested so permission prompt appears when opening website
     const askMicEarly = () => {
-      if (typeof window !== "undefined" && navigator.mediaDevices?.getUserMedia) {
-        navigator.mediaDevices
-          .getUserMedia({
-            audio: {
-              echoCancellation: false,
-              noiseSuppression: false,
-              autoGainControl: false,
-            },
-          })
-          .catch(() => navigator.mediaDevices.getUserMedia({ audio: true }))
-          .then((stream) => {
-            window.__birthdayMicStream = stream;
-          })
-          .catch(() => {});
+      if (typeof window !== "undefined") {
+        if (!window.__birthdayAudioCtx && (window.AudioContext || window.webkitAudioContext)) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          try {
+            window.__birthdayAudioCtx = new AudioContextClass();
+          } catch (e) {}
+        }
+        if (window.__birthdayAudioCtx && window.__birthdayAudioCtx.state === "suspended") {
+          window.__birthdayAudioCtx.resume().catch(() => {});
+        }
+        if (navigator.mediaDevices?.getUserMedia && !window.__birthdayMicStream) {
+          navigator.mediaDevices
+            .getUserMedia({ audio: true })
+            .then((stream) => {
+              window.__birthdayMicStream = stream;
+            })
+            .catch(() => {});
+        }
       }
     };
     askMicEarly();

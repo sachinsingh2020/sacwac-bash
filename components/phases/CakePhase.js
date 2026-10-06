@@ -34,40 +34,54 @@ export default function CakePhase({ person, onComplete }) {
         setMicEnabled(true);
         const AudioContextClass =
           window.AudioContext || window.webkitAudioContext;
-        const ctx = new AudioContextClass();
+        if (!AudioContextClass) return;
+
+        let ctx = window.__birthdayAudioCtx;
+        if (!ctx || ctx.state === "closed") {
+          ctx = new AudioContextClass();
+          window.__birthdayAudioCtx = ctx;
+        }
         audioContextRef.current = ctx;
 
         // Auto-resume AudioContext on iOS/Android if started in suspended state
         if (ctx.state === "suspended") {
           ctx.resume().catch(() => {});
         }
-        const ensureActive = () => {
+        const resumeAudio = () => {
           if (audioContextRef.current && audioContextRef.current.state === "suspended") {
             audioContextRef.current.resume().catch(() => {});
           }
         };
-        window.addEventListener("touchstart", ensureActive, { passive: true, once: true });
-        window.addEventListener("pointerdown", ensureActive, { passive: true, once: true });
+        window.addEventListener("touchstart", resumeAudio, { passive: true });
+        window.addEventListener("pointerdown", resumeAudio, { passive: true });
+        window.addEventListener("click", resumeAudio, { passive: true });
 
         analyserRef.current = ctx.createAnalyser();
         analyserRef.current.fftSize = 256;
-        analyserRef.current.smoothingTimeConstant = 0.3; // Responsive to fast air puffs
+        analyserRef.current.smoothingTimeConstant = 0.2; // Responsive to breath puffs
 
-        microphoneRef.current = ctx.createMediaStreamSource(stream);
-        microphoneRef.current.connect(analyserRef.current);
+        try {
+          microphoneRef.current = ctx.createMediaStreamSource(stream);
+          microphoneRef.current.connect(analyserRef.current);
+        } catch (e) {
+          console.warn("Could not connect mic source:", e);
+        }
 
         const freqBins = analyserRef.current.frequencyBinCount;
         const freqData = new Uint8Array(freqBins);
         const timeData = new Uint8Array(freqBins);
 
         let blowFrames = 0;
+        let baselineVol = 0;
+        let baselineDev = 0;
+        let baselineLow = 0;
+        let baselineSamples = 0;
 
         const checkAudio = () => {
           if (blownOut) return;
 
-          // Never listen or blow out until the cake is fully assembled AND
-          // a safe grace period (1200ms) has passed so user sees the lit candle & prompt
-          if (!isBuiltRef.current || !readyTimeRef.current || Date.now() - readyTimeRef.current < 1200) {
+          // Never listen or blow out until the cake is fully assembled AND ready
+          if (!isBuiltRef.current || !readyTimeRef.current) {
             reqRef.current = requestAnimationFrame(checkAudio);
             return;
           }
@@ -80,43 +94,73 @@ export default function CakePhase({ person, onComplete }) {
           analyserRef.current.getByteFrequencyData(freqData);
           analyserRef.current.getByteTimeDomainData(timeData);
 
-          // 1. Low-Frequency Energy (Wind & breath turbulence: 0-600Hz, bins 1 to 8)
-          const lowBins = Math.min(8, freqBins);
-          let lowSum = 0;
-          for (let i = 1; i < lowBins; i++) {
-            lowSum += freqData[i];
-          }
-          const lowAvg = lowSum / (lowBins - 1);
+          // 1. Overall volume
+          let fSum = 0;
+          for (let i = 0; i < freqBins; i++) fSum += freqData[i];
+          const curVol = fSum / freqBins;
 
-          // 2. High-Frequency Energy (Music vocals, instruments: bins 16 to 50)
-          const highStart = Math.min(16, freqBins - 1);
-          const highEnd = Math.min(50, freqBins);
-          let highSum = 0;
-          let highCount = 0;
-          for (let i = highStart; i < highEnd; i++) {
-            highSum += freqData[i];
-            highCount++;
-          }
-          const highAvg = highCount > 0 ? highSum / highCount : 0;
+          // 2. Low-Frequency Energy (Wind & breath turbulence: bins 1 to 14, ~100Hz - 2400Hz)
+          const lowBins = Math.min(14, freqBins);
+          let lowSum = 0;
+          for (let i = 1; i < lowBins; i++) lowSum += freqData[i];
+          const curLow = lowSum / (lowBins - 1);
 
           // 3. Time-domain amplitude displacement (direct air impact on mic diaphragm)
-          let timeDevSum = 0;
+          let devSum = 0;
+          let maxDev = 0;
           for (let i = 0; i < timeData.length; i++) {
-            timeDevSum += Math.abs(timeData[i] - 128);
+            const dev = Math.abs(timeData[i] - 128);
+            devSum += dev;
+            if (dev > maxDev) maxDev = dev;
           }
-          const timeDevAvg = timeDevSum / timeData.length;
+          const curDev = devSum / timeData.length;
 
-          // Breath turbulence detection tuned for mobile phones:
-          // A blow creates strong diaphragm displacement (timeDevAvg >= 14) and low-frequency rumble (lowAvg >= 26)
-          // that exceeds ambient musical treble (lowAvg > highAvg * 1.2), or a firm breath (timeDevAvg >= 22 && lowAvg >= 32).
+          const elapsedSinceBuilt = Date.now() - readyTimeRef.current;
+
+          // During the initial 1200ms grace period while the candle is lighting up,
+          // sample and calibrate the ambient background level (room noise + background music)
+          if (elapsedSinceBuilt < 1200) {
+            baselineVol = (baselineVol * baselineSamples + curVol) / (baselineSamples + 1);
+            baselineDev = (baselineDev * baselineSamples + curDev) / (baselineSamples + 1);
+            baselineLow = (baselineLow * baselineSamples + curLow) / (baselineSamples + 1);
+            baselineSamples++;
+            reqRef.current = requestAnimationFrame(checkAudio);
+            return;
+          }
+
+          // Slowly adapt baseline to background music if quiet
+          if (curVol < (baselineVol || 15) * 1.35) {
+            baselineVol = (baselineVol || curVol) * 0.98 + curVol * 0.02;
+            baselineDev = (baselineDev || curDev) * 0.98 + curDev * 0.02;
+            baselineLow = (baselineLow || curLow) * 0.98 + curLow * 0.02;
+          }
+
+          const bVol = baselineVol || 12;
+          const bDev = baselineDev || 2.5;
+          const bLow = baselineLow || 10;
+
+          // Detection signatures for blowing into the mic:
+          // 1. Air puff causing diaphragm deviation above ambient music
+          const isAirPuff = curDev >= Math.max(5.2, bDev + 2.4);
+
+          // 2. Low-frequency breath turbulence surge
+          const isWindSurge = curLow >= Math.max(24.0, bLow + 9.0);
+
+          // 3. Overall breath volume surge above music
+          const isVolumeSurge = curVol >= Math.max(26.0, bVol + 9.0) && (curLow >= 18 || curDev >= 4.0);
+
+          // 4. Firm blow or hard breath
+          const isFirmBlow = curLow >= 32 || curDev >= 7.5 || maxDev >= 28;
+
           const isBlowingNow =
-            (timeDevAvg >= 14 && lowAvg >= 26 && lowAvg > highAvg * 1.2) ||
-            (timeDevAvg >= 22 && lowAvg >= 32);
+            (isAirPuff && isWindSurge) ||
+            isVolumeSurge ||
+            isFirmBlow;
 
           if (isBlowingNow) {
             blowFrames += 1;
-            // Require sustained breath over ~100ms (6 consecutive frames) to ignore music drum beats/transients
-            if (blowFrames >= 6) {
+            // Require 3 consecutive frames (~50ms) to ignore momentary music clicks/transients
+            if (blowFrames >= 3) {
               handleBlowOut();
               return;
             }
@@ -129,18 +173,19 @@ export default function CakePhase({ person, onComplete }) {
         checkAudio();
       };
 
-      if (typeof window !== "undefined" && window.__birthdayMicStream && window.__birthdayMicStream.active) {
+      const isLiveStream = (stream) => {
+        return (
+          stream &&
+          stream.getAudioTracks &&
+          stream.getAudioTracks().some((t) => t.readyState === "live")
+        );
+      };
+
+      if (typeof window !== "undefined" && isLiveStream(window.__birthdayMicStream)) {
         attachAudio(window.__birthdayMicStream);
       } else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices
-          .getUserMedia({
-            audio: {
-              echoCancellation: false,
-              noiseSuppression: false,
-              autoGainControl: false,
-            },
-          })
-          .catch(() => navigator.mediaDevices.getUserMedia({ audio: true }))
+          .getUserMedia({ audio: true })
           .then((stream) => {
             window.__birthdayMicStream = stream;
             attachAudio(stream);
@@ -176,6 +221,7 @@ export default function CakePhase({ person, onComplete }) {
       try {
         window.__birthdayMicStream.getTracks().forEach((track) => track.stop());
       } catch (e) {}
+      window.__birthdayMicStream = null;
     }
     // Signal completion after candle blowout celebration fireworks have bloomed (~2.8s)
     setTimeout(() => {
