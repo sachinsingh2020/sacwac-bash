@@ -267,34 +267,6 @@ export default function BirthdayExperience({
 
   return (
     <>
-      {unlockedManually && countdownInfo.isLocked && !isPreview && (
-        <button
-          type="button"
-          onClick={() => setUnlockedManually(false)}
-          style={{
-            position: "fixed",
-            top: "16px",
-            right: "16px",
-            zIndex: 999,
-            background: "rgba(255, 255, 255, 0.94)",
-            backdropFilter: "blur(10px)",
-            border: "1px solid #f9cbd5",
-            color: "#d95775",
-            borderRadius: "999px",
-            padding: "8px 16px",
-            fontSize: "12px",
-            fontWeight: 700,
-            boxShadow: "0 6px 20px rgba(217, 87, 117, 0.2)",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-          }}
-          title="Return to the countdown screen"
-        >
-          <span>⏳</span> Return to Countdown
-        </button>
-      )}
       <main className={`experience phase-${phase} ${isPreview ? "has-preview-bar is-preview-mode" : ""}`}>
         {isPreview && (
           <aside className="preview-top-bar" role="banner" aria-label="Preview toolbar">
