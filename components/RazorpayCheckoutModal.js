@@ -89,6 +89,17 @@ export default function RazorpayCheckoutModal({
         throw new Error(orderData.error || "Failed to create payment order.");
       }
 
+      // Track InitiateCheckout in Meta Pixel
+      if (typeof window !== "undefined" && typeof window.fbq === "function") {
+        try {
+          window.fbq("track", "InitiateCheckout", {
+            value: pricing.current,
+            currency: currency,
+            content_name: `${offer.month} Offer: Celebration Page`,
+          });
+        } catch (e) {}
+      }
+
       // 3. Configure Razorpay Standard Checkout
       const options = {
         key: orderData.keyId,
@@ -121,6 +132,17 @@ export default function RazorpayCheckoutModal({
             const verifyData = await verifyRes.json();
             if (!verifyRes.ok || !verifyData.slug) {
               throw new Error(verifyData.error || "Payment verification failed.");
+            }
+
+            // Track Purchase in Meta Pixel
+            if (typeof window !== "undefined" && typeof window.fbq === "function") {
+              try {
+                window.fbq("track", "Purchase", {
+                  value: pricing.current,
+                  currency: currency,
+                  content_name: `${offer.month} Offer: Celebration Page`,
+                });
+              } catch (e) {}
             }
 
             // 5. Celebration is verified & saved! Trigger success callback

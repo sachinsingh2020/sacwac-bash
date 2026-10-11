@@ -50,6 +50,13 @@ export default function TrackVisit({ slug = "" }) {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "",
     };
 
+    // Track client-side page views in Meta Pixel if loaded
+    if (typeof window !== "undefined" && typeof window.fbq === "function") {
+      try {
+        window.fbq("track", "PageView");
+      } catch (e) {}
+    }
+
     fetch("/api/track", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
