@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import Razorpay from 'razorpay';
 import { connectToDatabase } from '../../../../lib/db';
 import BirthdayPage from '../../../../models/BirthdayPage';
 
@@ -33,17 +34,42 @@ export async function POST(request) {
       pagePayload
     } = await request.json();
 
-    const key_secret = process.env.RAZORPAY_KEY_SECRET;
+    const key_secret = (process.env.RAZORPAY_KEY_SECRET || '').trim();
+    const key_id = (process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '').trim();
+
     if (!key_secret) {
       return NextResponse.json({ error: 'Razorpay secret not configured' }, { status: 500 });
     }
 
-    // Verify cryptographic signature
-    const hmac = crypto.createHmac('sha256', key_secret);
-    hmac.update(`${razorpay_order_id}|${razorpay_payment_id}`);
-    const generatedSignature = hmac.digest('hex');
+    // 1. Verify cryptographic HMAC SHA256 signature
+    let isSignatureValid = false;
+    try {
+      const hmac = crypto.createHmac('sha256', key_secret);
+      hmac.update(`${razorpay_order_id}|${razorpay_payment_id}`);
+      const generatedSignature = hmac.digest('hex');
+      isSignatureValid = generatedSignature === razorpay_signature;
+    } catch (hmacErr) {
+      console.warn('HMAC calculation error:', hmacErr);
+    }
 
-    const isSignatureValid = generatedSignature === razorpay_signature;
+    // 2. Direct Razorpay API verification fallback if signature verification failed
+    if (!isSignatureValid && key_id && key_secret) {
+      try {
+        const razorpay = new Razorpay({ key_id, key_secret });
+        const payment = await razorpay.payments.fetch(razorpay_payment_id);
+        if (
+          payment &&
+          payment.order_id === razorpay_order_id &&
+          (payment.status === 'captured' || payment.status === 'authorized')
+        ) {
+          console.log('Payment verified via Razorpay API fetch fallback:', payment.id);
+          isSignatureValid = true;
+        }
+      } catch (fetchErr) {
+        console.error('Razorpay payment fetch fallback error:', fetchErr.message);
+      }
+    }
+
     if (!isSignatureValid) {
       return NextResponse.json(
         { error: 'Payment verification failed: invalid signature.' },

@@ -4,8 +4,8 @@ import { CURRENCY_CONFIG } from '../../../../lib/monthlyOffer';
 
 export async function POST(request) {
   try {
-    const key_id = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-    const key_secret = process.env.RAZORPAY_KEY_SECRET;
+    const key_id = (process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '').trim();
+    const key_secret = (process.env.RAZORPAY_KEY_SECRET || '').trim();
 
     if (!key_id || !key_secret) {
       return NextResponse.json(
