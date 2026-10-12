@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '../../../../lib/db';
 import VisitorLog from '../../../../models/VisitorLog';
+import BirthdayPage from '../../../../models/BirthdayPage';
 import { verifyAdminAuth } from '../../../../lib/adminAuth';
 
 export const runtime = 'nodejs';
@@ -41,7 +42,7 @@ export async function GET(request) {
     // Base query filter (if filtering by a specific slug)
     const baseMatch = slugFilter && slugFilter !== 'all' ? { slug: slugFilter } : {};
 
-    // Parallel count queries
+    // Parallel count queries and fetch paid buyers
     const [
       countTotal,
       countUniqueTotal,
@@ -51,6 +52,7 @@ export async function GET(request) {
       countMonth,
       countYear,
       availableSlugs,
+      paidPages,
     ] = await Promise.all([
       VisitorLog.countDocuments(baseMatch),
       VisitorLog.distinct('visitorId', baseMatch).then((res) => res.length),
@@ -60,7 +62,61 @@ export async function GET(request) {
       VisitorLog.countDocuments({ ...baseMatch, createdAt: { $gte: startOfMonth } }),
       VisitorLog.countDocuments({ ...baseMatch, createdAt: { $gte: startOfYear } }),
       VisitorLog.distinct('slug', { slug: { $ne: '' } }),
+      BirthdayPage.find({
+        $or: [{ isPaid: true }, { paymentId: { $regex: /^pay_/ } }],
+      })
+        .sort({ createdAt: -1 })
+        .lean(),
     ]);
+
+    // Slugs of paid pages
+    const paidSlugs = (paidPages || []).map((p) => p.slug).filter(Boolean);
+    const paidSlugsSet = new Set(paidSlugs);
+
+    // Aggregate visitor traffic stats for paid links
+    let paidTrafficMap = {};
+    if (paidSlugs.length > 0) {
+      try {
+        const trafficAgg = await VisitorLog.aggregate([
+          { $match: { slug: { $in: paidSlugs } } },
+          {
+            $group: {
+              _id: '$slug',
+              totalVisits: { $sum: 1 },
+              uniqueVisitors: { $addToSet: '$visitorId' },
+              lastVisit: { $max: '$createdAt' },
+            },
+          },
+        ]);
+
+        trafficAgg.forEach((item) => {
+          paidTrafficMap[item._id] = {
+            totalVisits: item.totalVisits || 0,
+            uniqueVisitors: (item.uniqueVisitors || []).filter(Boolean).length,
+            lastVisit: item.lastVisit || null,
+          };
+        });
+      } catch (aggErr) {
+        console.warn('Failed to aggregate paid traffic:', aggErr.message);
+      }
+    }
+
+    const paidBuyers = (paidPages || []).map((p) => ({
+      id: p._id.toString(),
+      slug: p.slug,
+      name: p.name || 'Someone Special',
+      nickname: p.nickname || '',
+      dob: p.dob || '',
+      age: p.age || '',
+      date: p.date || '',
+      photo: p.photo || '',
+      paymentId: p.paymentId || '',
+      orderId: p.orderId || '',
+      createdAt: p.createdAt,
+      totalVisits: paidTrafficMap[p.slug]?.totalVisits || 0,
+      uniqueVisitors: paidTrafficMap[p.slug]?.uniqueVisitors || 0,
+      lastVisit: paidTrafficMap[p.slug]?.lastVisit || null,
+    }));
 
     // Custom Date calculations if requested
     let customDateStats = null;
@@ -135,6 +191,7 @@ export async function GET(request) {
         thisYear: countYear,
         total: countTotal,
         uniqueTotal: countUniqueTotal,
+        paidBuyersCount: paidBuyers.length,
       },
       customDate: customDateStats,
       breakdowns: {
@@ -142,10 +199,14 @@ export async function GET(request) {
         browsers: topBrowsers.map((b) => ({ name: b._id || 'Unknown', count: b.count })),
       },
       availableSlugs: availableSlugs.filter(Boolean),
+      paidBuyers,
+      paidBuyersCount: paidBuyers.length,
+      paidSlugs,
       recordsCount: logs.length,
       records: logs.map((log) => ({
         id: log._id.toString(),
         slug: log.slug || '',
+        isPaidLink: paidSlugsSet.has(log.slug),
         pageTitle: log.pageTitle || '',
         url: log.url || '',
         referrer: log.referrer || 'Direct / Bookmark',
