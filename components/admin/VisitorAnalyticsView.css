@@ -80,7 +80,8 @@
 }
 
 /* Stat Cards Grid */
-.analytics-stat-grid {
+.analytics-stat-grid,
+.analytics-stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 16px;
@@ -123,7 +124,8 @@
   margin-bottom: 6px;
 }
 
-.analytics-stat-val {
+.analytics-stat-val,
+.analytics-stat-value {
   font: 800 28px var(--font-sans);
   color: var(--ink, #32252b);
   line-height: 1.1;
@@ -726,6 +728,94 @@
   margin: 0;
   font-size: 13px;
   color: #7d5964;
+}
+
+/* Single Row of Compact Quick Metric Cards */
+.buyers-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  width: 100%;
+}
+
+.buyers-compact-card {
+  background: #ffffff;
+  border: 1px solid #ebd9de;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 4px 14px rgba(169, 134, 124, 0.05);
+  min-width: 0;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.buyers-compact-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(169, 134, 124, 0.1);
+  border-color: #e5b8c3;
+}
+
+.buyers-compact-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.buyers-compact-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.buyers-compact-label {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #8c737c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.buyers-compact-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: #36242a;
+  line-height: 1.2;
+  margin: 1px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.buyers-compact-sub {
+  font-size: 10.5px;
+  color: #d95775;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1024px) {
+  .buyers-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 540px) {
+  .buyers-stats-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .buyers-table-card {

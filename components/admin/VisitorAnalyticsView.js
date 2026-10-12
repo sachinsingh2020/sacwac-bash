@@ -212,47 +212,47 @@ export default function VisitorAnalyticsView({ adminToken }) {
             </button>
           </div>
 
-          {/* Quick Metrics for Paid Orders */}
-          <div className="analytics-stats-grid">
-            <div className="analytics-stat-card card-today">
-              <div className="analytics-stat-icon">🎉</div>
-              <div className="analytics-stat-body">
-                <span className="analytics-stat-label">Paid Celebrations</span>
-                <div className="analytics-stat-value">{data.paidBuyersCount || 0}</div>
-                <span className="analytics-stat-sub">Verified customer orders</span>
+          {/* Quick Metrics for Paid Orders - Single Row of Small Cards */}
+          <div className="buyers-stats-row">
+            <div className="buyers-compact-card">
+              <div className="buyers-compact-icon" style={{ background: "#fef0f3" }}>🎉</div>
+              <div className="buyers-compact-body">
+                <span className="buyers-compact-label">Paid Celebrations</span>
+                <div className="buyers-compact-value">{data.paidBuyersCount || 0}</div>
+                <span className="buyers-compact-sub">Verified customer orders</span>
               </div>
             </div>
 
-            <div className="analytics-stat-card card-week">
-              <div className="analytics-stat-icon">💰</div>
-              <div className="analytics-stat-body">
-                <span className="analytics-stat-label">Total Revenue</span>
-                <div className="analytics-stat-value">₹{(data.paidBuyersCount || 0) * 99}</div>
-                <span className="analytics-stat-sub">From ₹99 promotional offer</span>
+            <div className="buyers-compact-card">
+              <div className="buyers-compact-icon" style={{ background: "#fdf6e9" }}>💰</div>
+              <div className="buyers-compact-body">
+                <span className="buyers-compact-label">Total Revenue</span>
+                <div className="buyers-compact-value">₹{(data.paidBuyersCount || 0) * 99}</div>
+                <span className="buyers-compact-sub">From ₹99 promotional offer</span>
               </div>
             </div>
 
-            <div className="analytics-stat-card card-month">
-              <div className="analytics-stat-icon">👁️</div>
-              <div className="analytics-stat-body">
-                <span className="analytics-stat-label">Paid Links Traffic</span>
-                <div className="analytics-stat-value">{totalPaidViews}</div>
-                <span className="analytics-stat-sub">Total views across paid links</span>
+            <div className="buyers-compact-card">
+              <div className="buyers-compact-icon" style={{ background: "#edf9f1" }}>👁️</div>
+              <div className="buyers-compact-body">
+                <span className="buyers-compact-label">Paid Links Traffic</span>
+                <div className="buyers-compact-value">{totalPaidViews}</div>
+                <span className="buyers-compact-sub">Total views on paid links</span>
               </div>
             </div>
 
-            <div className="analytics-stat-card card-alltime">
-              <div className="analytics-stat-icon">⏳</div>
-              <div className="analytics-stat-body">
-                <span className="analytics-stat-label">Latest Order</span>
-                <div className="analytics-stat-value" style={{ fontSize: "16px", marginTop: "4px" }}>
+            <div className="buyers-compact-card">
+              <div className="buyers-compact-icon" style={{ background: "#f2f3fd" }}>⏳</div>
+              <div className="buyers-compact-body">
+                <span className="buyers-compact-label">Latest Order</span>
+                <div className="buyers-compact-value" style={{ fontSize: "15px" }}>
                   {data.paidBuyers && data.paidBuyers.length > 0
                     ? formatTimestamp(data.paidBuyers[0].createdAt).split(",")[0]
                     : "None yet"}
                 </div>
-                <span className="analytics-stat-sub">
+                <span className="buyers-compact-sub">
                   {data.paidBuyers && data.paidBuyers.length > 0
-                    ? formatTimestamp(data.paidBuyers[0].createdAt).split(",")[1] || ""
+                    ? formatTimestamp(data.paidBuyers[0].createdAt).split(",")[1]?.trim() || "Recent"
                     : "No orders yet"}
                 </span>
               </div>
