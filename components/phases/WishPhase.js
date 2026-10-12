@@ -64,9 +64,6 @@ export default function WishPhase({ person, fallbackPhoto, onMessageComplete }) 
             <em>Birthday</em>, {person.name}!
           </h1>
           <p className="wish-message-body">{visibleMessage}</p>
-          <div className={`card-sign ${visibleMessage.length === message.length ? "show-sign" : ""}`}>
-            with all the love in the world ♡
-          </div>
         </div>
         <div className="envelope-front" />
         <button
@@ -83,6 +80,17 @@ export default function WishPhase({ person, fallbackPhoto, onMessageComplete }) 
           </span>
         )}
       </div>
+
+      {isOpen && (
+        <div
+          className={`wish-screen-signature ${
+            visibleMessage.length === message.length ? "show-sign" : ""
+          }`}
+          aria-hidden="true"
+        >
+          with all the love in the world ♡
+        </div>
+      )}
     </section>
   );
 }
