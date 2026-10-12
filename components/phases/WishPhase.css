@@ -398,32 +398,49 @@
 }
 
 /* Card Message Body */
-.wish-card p {
+.wish-card p,
+.wish-card .wish-message-body {
   grid-column: 2 !important;
-  margin: 0 0 16px !important;
+  margin: 0 0 18px !important;
   font-family: var(--font-sans) !important;
   font-size: clamp(14px, 1.35vw, 16px) !important;
   line-height: 1.7 !important;
   color: #553e45 !important;
   white-space: pre-wrap !important;
   word-break: break-word !important;
-  min-height: 5em !important;
+  min-height: auto !important;
 }
 
 /* Card Handwritten Sign */
 .wish-card .card-sign {
   grid-column: 2 !important;
   display: block !important;
+  width: 100% !important;
   font-family: 'Sacramento', cursive !important;
   font-size: 26px !important;
+  line-height: 1.35 !important;
   color: #d95775 !important;
-  margin-top: 10px !important;
+  margin-top: 14px !important;
+  margin-bottom: 6px !important;
   opacity: 0;
   transition: opacity 0.6s ease;
+  clear: both !important;
 }
 
 .wish-card .card-sign.show-sign {
   opacity: 1 !important;
+}
+
+.portrait-sparkle {
+  position: absolute !important;
+  bottom: -4px !important;
+  right: 10px !important;
+  color: #d95775 !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+  filter: drop-shadow(0 2px 4px rgba(217, 87, 117, 0.4)) !important;
+  pointer-events: none !important;
+  z-index: 6 !important;
 }
 
 /* Floating Birthday Cake Icon */
@@ -481,23 +498,32 @@
     flex-direction: column !important;
     align-items: center !important;
     text-align: center !important;
-    padding: 30px 22px 26px !important;
-    border-radius: 20px !important;
-    max-height: 82svh !important;
+    padding: 30px 22px 28px !important;
+    border-radius: 22px !important;
+    max-height: 84svh !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
     gap: 0 !important;
   }
 
+  /* Safe spacing above candles so flames never collide with kicker text */
   .wish-card .card-kicker {
-    font-size: 10px !important;
-    margin-bottom: 8px !important;
+    font-size: 10.5px !important;
+    letter-spacing: 2.2px !important;
+    margin: 0 0 28px !important;
+    flex-shrink: 0 !important;
+    width: 100% !important;
+    text-align: center !important;
   }
 
   .wish-card .portrait-wrap {
     width: 130px !important;
     height: 130px !important;
-    margin: 12px auto 14px !important;
+    margin: 10px auto 16px !important;
     border-radius: 50% !important;
     padding: 5px !important;
+    flex-shrink: 0 !important;
+    position: relative !important;
   }
 
   .wish-card .portrait-wrap img {
@@ -505,29 +531,70 @@
   }
 
   .photo-candles {
-    top: -20px !important;
-    gap: 8px !important;
+    position: absolute !important;
+    left: 50% !important;
+    top: -16px !important;
+    display: flex !important;
+    gap: 7px !important;
+    transform: translateX(-50%) !important;
+    z-index: 10 !important;
   }
 
   .photo-candles i {
     width: 7px !important;
-    height: 20px !important;
+    height: 18px !important;
+  }
+
+  .photo-candles i:nth-child(2) {
+    height: 22px !important;
+    transform: translateY(-3px) !important;
+  }
+
+  .photo-candles i:before {
+    width: 4.5px !important;
+    height: 8px !important;
+    top: -9px !important;
+  }
+
+  .portrait-sparkle {
+    bottom: -4px !important;
+    right: 8px !important;
+    font-size: 14px !important;
   }
 
   .wish-card h1 {
-    font-size: 24px !important;
-    margin: 4px 0 12px !important;
+    font-size: clamp(22px, 6vw, 26px) !important;
+    line-height: 1.2 !important;
+    margin: 4px 0 14px !important;
+    flex-shrink: 0 !important;
+    width: 100% !important;
   }
 
-  .wish-card p {
-    font-size: 14.5px !important;
-    line-height: 1.6 !important;
-    margin: 0 0 12px !important;
+  /* Clear separation between message text and the handwritten signature */
+  .wish-card p,
+  .wish-card .wish-message-body {
+    font-size: 14px !important;
+    line-height: 1.65 !important;
+    margin: 0 0 16px !important;
+    color: #553e45 !important;
+    flex-shrink: 0 !important;
+    width: 100% !important;
+    word-break: break-word !important;
+    min-height: auto !important;
   }
 
   .wish-card .card-sign {
-    font-size: 22px !important;
-    margin-top: 6px !important;
+    display: block !important;
+    width: 100% !important;
+    flex-shrink: 0 !important;
+    font-family: 'Sacramento', cursive !important;
+    font-size: 24px !important;
+    line-height: 1.35 !important;
+    color: #d95775 !important;
+    margin: 14px auto 8px !important;
+    padding-top: 4px !important;
+    clear: both !important;
+    text-align: center !important;
   }
 
   .wish-cake {
