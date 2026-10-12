@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import "./WishPhase.css";
 
 export default function WishPhase({ person, fallbackPhoto, onMessageComplete }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -46,7 +47,15 @@ export default function WishPhase({ person, fallbackPhoto, onMessageComplete }) 
             A note for you · {person.nickname || "you"}
           </span>
           <div className="portrait-wrap">
-            <img src={person.photo || fallbackPhoto} alt={person.name} />
+            <img
+              src={person.photo || fallbackPhoto}
+              alt={person.name}
+              onError={(e) => {
+                if (fallbackPhoto && e.target.src !== fallbackPhoto) {
+                  e.target.src = fallbackPhoto;
+                }
+              }}
+            />
             <span className="portrait-sparkle">✦</span><span className="photo-candles" aria-hidden="true"><i /><i /><i /></span>
           </div>
           <h1>
@@ -54,8 +63,7 @@ export default function WishPhase({ person, fallbackPhoto, onMessageComplete }) 
             <br />
             <em>Birthday</em>, {person.name}!
           </h1>
-          <p>{visibleMessage}</p>
-          <span className={`card-sign ${visibleMessage.length === message.length ? "show-sign" : ""}`}>with all the love in the world ♡</span>
+          <p className="wish-message-body">{visibleMessage}</p>
         </div>
         <div className="envelope-front" />
         <button
@@ -72,6 +80,17 @@ export default function WishPhase({ person, fallbackPhoto, onMessageComplete }) 
           </span>
         )}
       </div>
+
+      {isOpen && (
+        <div
+          className={`wish-screen-signature ${
+            visibleMessage.length === message.length ? "show-sign" : ""
+          }`}
+          aria-hidden="true"
+        >
+          with all the love in the world ♡
+        </div>
+      )}
     </section>
   );
 }

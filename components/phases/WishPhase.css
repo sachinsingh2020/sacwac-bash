@@ -1,0 +1,609 @@
+/* ==========================================================================
+   WishPhase / Birthday Letter & Envelope Styles
+   Centered and responsive for Desktop, Tablet, and Mobile
+   ========================================================================== */
+
+.wish-scene {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100svh;
+  height: 100vh;
+  height: 100svh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 32px 24px;
+  box-sizing: border-box;
+  background: radial-gradient(circle at 50% 35%, #fffaf5 0%, #fbe9ed 50%, #f5d4db 100%);
+}
+
+/* ==========================================================================
+   Envelope (Closed & Open States)
+   ========================================================================== */
+.letter-envelope {
+  position: relative;
+  z-index: 3;
+  width: min(580px, 88vw);
+  height: 380px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1200px;
+  transition: transform 0.6s ease;
+  margin: auto;
+}
+
+.envelope-back,
+.envelope-front {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  box-shadow: 0 30px 70px rgba(157, 92, 93, 0.28);
+}
+
+.envelope-back {
+  background: linear-gradient(145deg, #f4b5a9, #dc827d);
+  z-index: 1;
+}
+
+.envelope-front {
+  background: linear-gradient(145deg, #e99a91, #cb6c70);
+  clip-path: polygon(0 0, 50% 54%, 100% 0, 100% 100%, 0 100%);
+  z-index: 5;
+}
+
+/* Envelope Top Flap */
+.letter-envelope:before {
+  content: "";
+  position: absolute;
+  z-index: 6;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 56%;
+  clip-path: polygon(0 0, 50% 50%, 100% 0, 100% 12%, 50% 64%, 0 12%);
+  background: #f8c9bd;
+  filter: drop-shadow(0 3px 2px rgba(168, 81, 89, 0.25));
+  transform-origin: top center;
+  transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.25, 1);
+  backface-visibility: hidden;
+}
+
+.letter-envelope.is-open:before {
+  transform: rotateX(180deg);
+  z-index: 2;
+}
+
+/* Wax Seal Button */
+.envelope-seal {
+  position: absolute;
+  z-index: 8;
+  left: 50%;
+  top: 36%;
+  transform: translate(-50%, -50%);
+  width: 96px;
+  height: 96px;
+  border: 5px solid #f8c4bd;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 28%, #ea5c6e, #9e1f32 75%);
+  color: #fff5ec;
+  padding: 8px;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(129, 45, 57, 0.35), inset 0 0 0 2px #8f2030;
+  font: 800 8.5px/1.35 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-align: center;
+  transition: transform 0.3s ease, opacity 0.35s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.envelope-seal:hover {
+  transform: translate(-50%, -50%) scale(1.08) rotate(-4deg);
+}
+
+.envelope-seal:after {
+  content: "✦";
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(249, 195, 185, 0.4);
+  border-radius: 50%;
+  font-size: 13px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 2px;
+}
+
+.letter-envelope.is-open .envelope-seal {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(1.6);
+  pointer-events: none;
+}
+
+/* Script Prompt Under Seal */
+.envelope-prompt {
+  position: absolute;
+  z-index: 9;
+  left: 50%;
+  top: 72%;
+  transform: translateX(-50%);
+  color: #8c4c5a;
+  font: 24px 'Sacramento', cursive;
+  white-space: nowrap;
+  animation: envelope-prompt-float 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.envelope-prompt b {
+  color: #c75568;
+}
+
+@keyframes envelope-prompt-float {
+  0%, 100% {
+    transform: translate(-50%, 0);
+  }
+  50% {
+    transform: translate(-50%, -7px);
+  }
+}
+
+/* Sparkles & Wrinkles */
+.envelope-sparkles {
+  position: absolute;
+  z-index: 7;
+  inset: 15% 12% 20%;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.envelope-sparkles i {
+  position: absolute;
+  color: #d95775;
+  font-style: normal;
+  font-size: 20px;
+}
+
+.envelope-sparkles i:nth-child(1) { left: 37%; top: 35%; }
+.envelope-sparkles i:nth-child(2) { left: 62%; top: 48%; font-size: 15px; }
+.envelope-sparkles i:nth-child(3) { left: 49%; top: 57%; font-size: 17px; }
+
+.letter-envelope.is-open .envelope-sparkles {
+  animation: envelope-sparkle-rise 1.4s ease-out 0.8s both;
+}
+
+.envelope-wrinkles {
+  position: absolute;
+  z-index: 7;
+  left: 50%;
+  top: 38%;
+  width: 110px;
+  height: 55px;
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.envelope-wrinkles i {
+  position: absolute;
+  width: 34px;
+  height: 9px;
+  border-top: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  transform: rotate(25deg);
+}
+
+.envelope-wrinkles i:nth-child(1) { left: 0; top: 20px; }
+.envelope-wrinkles i:nth-child(2) { left: 38px; top: 7px; transform: rotate(-10deg); }
+.envelope-wrinkles i:nth-child(3) { left: 73px; top: 24px; transform: rotate(35deg); }
+
+.letter-envelope.is-open .envelope-wrinkles {
+  animation: envelope-wrinkle-pop 0.8s ease-out 0.65s both;
+}
+
+@keyframes envelope-sparkle-rise {
+  0% { opacity: 0; transform: translateY(18px) scale(0.5); }
+  35% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-50px) scale(1.2); }
+}
+
+@keyframes envelope-wrinkle-pop {
+  0% { opacity: 0; transform: translateX(-50%) scale(0.4); }
+  45% { opacity: 1; transform: translateX(-50%) scale(1.15); }
+  100% { opacity: 0; transform: translateX(-50%) scale(1.35); }
+}
+
+/* When Envelope is Opened: Envelope Fades Back Gently */
+.letter-envelope.is-open {
+  height: auto;
+  width: 100%;
+  max-width: min(940px, 92vw);
+  perspective: none;
+}
+
+.letter-envelope.is-open .envelope-back,
+.letter-envelope.is-open .envelope-front,
+.letter-envelope.is-open:before {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.6s ease 0.8s;
+}
+
+/* ==========================================================================
+   The Birthday Wish Card (The Letter Itself)
+   ========================================================================== */
+.letter-envelope .wish-card {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.7);
+  transition: opacity 0.3s ease, transform 0.6s ease;
+}
+
+.letter-envelope.is-open .wish-card {
+  position: relative !important;
+  top: 0 !important;
+  left: auto !important;
+  transform: none !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 10 !important;
+  animation: letterCardArrive 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both;
+}
+
+@keyframes letterCardArrive {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.wish-card {
+  background: #ffffff !important;
+  border: 1px solid #ebd9de !important;
+  border-radius: 24px !important;
+  box-shadow: 0 24px 70px rgba(169, 100, 115, 0.16), 0 4px 18px rgba(0, 0, 0, 0.04) !important;
+  width: 100% !important;
+  max-width: min(940px, 92vw) !important;
+  box-sizing: border-box !important;
+  padding: 40px 48px 36px !important;
+  display: grid !important;
+  grid-template-columns: 210px 1fr !important;
+  column-gap: 40px !important;
+  row-gap: 8px !important;
+  align-items: start !important;
+  text-align: left !important;
+  position: relative !important;
+  max-height: 86vh !important;
+  max-height: 86svh !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Card Kicker (Top Meta) */
+.wish-card .card-kicker {
+  grid-column: 1 / -1 !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 2.2px !important;
+  color: #ba6d81 !important;
+  margin: 0 0 6px !important;
+  display: block !important;
+}
+
+/* Portrait Frame & Birthday Candles */
+.wish-card .portrait-wrap {
+  grid-column: 1 !important;
+  grid-row: 2 / span 3 !important;
+  width: 200px !important;
+  height: 250px !important;
+  position: relative !important;
+  border-radius: 18px !important;
+  padding: 6px !important;
+  background: linear-gradient(135deg, #fff7e6 0%, #ffd6e1 45%, #f69cb0 80%, #ffd9e2 100%) !important;
+  border: 2.5px solid #f9c7d4 !important;
+  box-shadow: 0 12px 28px rgba(217, 87, 117, 0.2) !important;
+  margin: 12px 0 0 !important;
+  box-sizing: border-box !important;
+}
+
+.wish-card .portrait-wrap img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 13px !important;
+  display: block !important;
+}
+
+.photo-candles {
+  position: absolute !important;
+  z-index: 5 !important;
+  left: 50% !important;
+  top: -24px !important;
+  display: flex !important;
+  gap: 10px !important;
+  transform: translateX(-50%) !important;
+}
+
+.photo-candles i {
+  position: relative !important;
+  width: 9px !important;
+  height: 27px !important;
+  border-radius: 3px 3px 2px 2px !important;
+  background: repeating-linear-gradient(0deg, #e95f87 0 5px, #ffd27c 5px 9px) !important;
+  box-shadow: 0 2px 3px rgba(141, 70, 83, 0.3) !important;
+}
+
+.photo-candles i:before {
+  content: " " !important;
+  position: absolute !important;
+  left: 2px !important;
+  top: -11px !important;
+  width: 5px !important;
+  height: 10px !important;
+  border-radius: 50% 50% 45% 45% !important;
+  background: radial-gradient(circle at 50% 75%, #fff4a5 0 25%, #ffb23e 30% 65%, #f06c49 68%) !important;
+  animation: photo-candle-flame 0.8s ease-in-out infinite alternate !important;
+}
+
+.photo-candles i:nth-child(2) {
+  height: 32px !important;
+  transform: translateY(-5px) !important;
+}
+
+.photo-candles i:nth-child(2):before {
+  animation-delay: 0.2s !important;
+}
+
+.photo-candles i:nth-child(3):before {
+  animation-delay: 0.4s !important;
+}
+
+@keyframes photo-candle-flame {
+  to {
+    transform: scale(1.15) rotate(3deg);
+    filter: brightness(1.2);
+  }
+}
+
+/* Card Heading */
+.wish-card h1 {
+  grid-column: 2 !important;
+  margin: 6px 0 14px !important;
+  font-family: var(--font-sans) !important;
+  font-weight: 800 !important;
+  font-size: clamp(26px, 3.2vw, 36px) !important;
+  line-height: 1.15 !important;
+  color: #3b2229 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.wish-card h1 em {
+  color: #d95775 !important;
+  font-style: italic !important;
+  font-family: inherit !important;
+}
+
+/* Card Message Body */
+.wish-card p,
+.wish-card .wish-message-body {
+  grid-column: 2 !important;
+  margin: 0 0 18px !important;
+  font-family: var(--font-sans) !important;
+  font-size: clamp(14px, 1.35vw, 16px) !important;
+  line-height: 1.7 !important;
+  color: #553e45 !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  min-height: auto !important;
+}
+
+/* Fixed / Anchored Signature Below the Screen */
+.wish-screen-signature {
+  position: fixed;
+  bottom: max(22px, env(safe-area-inset-bottom, 22px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 45;
+  font-family: 'Sacramento', cursive;
+  font-size: 26px;
+  line-height: 1.25;
+  color: #d95775;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.8s ease 0.2s, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s;
+  text-shadow: 0 1px 4px rgba(255, 255, 255, 0.9), 0 2px 10px rgba(217, 87, 117, 0.2);
+}
+
+.wish-screen-signature.show-sign {
+  opacity: 1;
+}
+
+.portrait-sparkle {
+  position: absolute !important;
+  bottom: -4px !important;
+  right: 10px !important;
+  color: #d95775 !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+  filter: drop-shadow(0 2px 4px rgba(217, 87, 117, 0.4)) !important;
+  pointer-events: none !important;
+  z-index: 6 !important;
+}
+
+/* Floating Birthday Cake Icon */
+.wish-cake {
+  position: absolute !important;
+  right: 28px !important;
+  top: 24px !important;
+  font-size: 44px !important;
+  line-height: 1 !important;
+  filter: drop-shadow(0 6px 10px rgba(185, 118, 118, 0.28)) !important;
+  animation: wish-cake-float 2.6s ease-in-out infinite !important;
+}
+
+@keyframes wish-cake-float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(3deg);
+  }
+}
+
+/* ==========================================================================
+   Mobile & Tablet Responsiveness
+   ========================================================================== */
+@media (max-width: 800px) {
+  .wish-scene {
+    padding: 20px 14px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .letter-envelope {
+    width: min(92vw, 400px);
+    height: 310px;
+  }
+
+  .letter-envelope.is-open {
+    width: min(94vw, 440px);
+  }
+
+  .envelope-seal {
+    width: 80px;
+    height: 80px;
+    font-size: 7.5px;
+  }
+
+  .envelope-prompt {
+    top: 76%;
+    font-size: 20px;
+  }
+
+  .wish-card {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    padding: 30px 22px 24px !important;
+    border-radius: 22px !important;
+    max-height: calc(100svh - 85px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    gap: 0 !important;
+  }
+
+  /* Safe spacing above candles so flames never collide with kicker text */
+  .wish-card .card-kicker {
+    font-size: 10.5px !important;
+    letter-spacing: 2.2px !important;
+    margin: 0 0 28px !important;
+    flex-shrink: 0 !important;
+    width: 100% !important;
+    text-align: center !important;
+  }
+
+  .wish-card .portrait-wrap {
+    width: 130px !important;
+    height: 130px !important;
+    margin: 10px auto 16px !important;
+    border-radius: 50% !important;
+    padding: 5px !important;
+    flex-shrink: 0 !important;
+    position: relative !important;
+  }
+
+  .wish-card .portrait-wrap img {
+    border-radius: 50% !important;
+  }
+
+  .photo-candles {
+    position: absolute !important;
+    left: 50% !important;
+    top: -16px !important;
+    display: flex !important;
+    gap: 7px !important;
+    transform: translateX(-50%) !important;
+    z-index: 10 !important;
+  }
+
+  .photo-candles i {
+    width: 7px !important;
+    height: 18px !important;
+  }
+
+  .photo-candles i:nth-child(2) {
+    height: 22px !important;
+    transform: translateY(-3px) !important;
+  }
+
+  .photo-candles i:before {
+    width: 4.5px !important;
+    height: 8px !important;
+    top: -9px !important;
+  }
+
+  .portrait-sparkle {
+    bottom: -4px !important;
+    right: 8px !important;
+    font-size: 14px !important;
+  }
+
+  .wish-card h1 {
+    font-size: clamp(22px, 6vw, 26px) !important;
+    line-height: 1.2 !important;
+    margin: 4px 0 14px !important;
+    flex-shrink: 0 !important;
+    width: 100% !important;
+  }
+
+  .wish-card p,
+  .wish-card .wish-message-body {
+    font-size: 14px !important;
+    line-height: 1.65 !important;
+    margin: 0 !important;
+    color: #553e45 !important;
+    flex-shrink: 0 !important;
+    width: 100% !important;
+    word-break: break-word !important;
+    min-height: auto !important;
+  }
+
+  /* Fixed signature outside the card, below the screen with clearance for balloon */
+  .wish-screen-signature {
+    bottom: max(16px, env(safe-area-inset-bottom, 16px));
+    left: calc(50% - 22px);
+    font-size: 21px;
+    max-width: calc(100vw - 84px);
+  }
+
+  .wish-cake {
+    right: 14px !important;
+    top: 14px !important;
+    font-size: 34px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .wish-screen-signature {
+    font-size: 19.5px;
+    left: calc(50% - 24px);
+    bottom: max(14px, env(safe-area-inset-bottom, 14px));
+  }
+}
