@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import "./WishPhase.css";
 
 export default function WishPhase({ person, fallbackPhoto, onMessageComplete }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -46,7 +47,15 @@ export default function WishPhase({ person, fallbackPhoto, onMessageComplete }) 
             A note for you · {person.nickname || "you"}
           </span>
           <div className="portrait-wrap">
-            <img src={person.photo || fallbackPhoto} alt={person.name} />
+            <img
+              src={person.photo || fallbackPhoto}
+              alt={person.name}
+              onError={(e) => {
+                if (fallbackPhoto && e.target.src !== fallbackPhoto) {
+                  e.target.src = fallbackPhoto;
+                }
+              }}
+            />
             <span className="portrait-sparkle">✦</span><span className="photo-candles" aria-hidden="true"><i /><i /><i /></span>
           </div>
           <h1>
