@@ -95,7 +95,7 @@ export default function TermsPage() {
           <div className="legal-contact-box">
             <strong>Magic Moments Legal Support</strong>
             <p>Website: <a href="https://www.magicmoments.live">https://www.magicmoments.live</a></p>
-            <p>Email: <a href="mailto:support@magicmoments.live">support@magicmoments.live</a></p>
+            <p>Email: <a href="mailto:magicmoments.work@gmail.com">magicmoments.work@gmail.com</a></p>
           </div>
         </section>
 
