@@ -1040,3 +1040,75 @@
   border-color: #d95775;
 }
 
+
+
+/* Celebrant Avatar & Profile Cell in Tables */
+.buyer-profile-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.buyer-thumb-avatar {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  border: 2px solid #ffd6e1 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+  display: block !important;
+}
+
+.buyer-monogram-avatar {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #ffd6e1 0%, #ffb3c6 100%) !important;
+  color: #bd3a5a !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-weight: 800 !important;
+  font-size: 18px !important;
+  border: 2px solid #fff !important;
+  box-shadow: 0 2px 6px rgba(217, 87, 117, 0.15) !important;
+}
+
+.buyer-nickname {
+  display: block;
+  font-size: 11px;
+  color: #d95775;
+  font-weight: 600;
+}
+
+.buyer-link-pill-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.buyer-copy-btn {
+  border: 1px solid #ebd9de;
+  background: #ffffff;
+  color: #7d5964;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.buyer-copy-btn:hover {
+  border-color: #d95775;
+  color: #d95775;
+}
