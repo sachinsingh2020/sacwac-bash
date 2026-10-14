@@ -221,8 +221,19 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="landing-footer">
-        <div>
-          © {new Date().getFullYear()} <strong>Magic Moments</strong> — Made with all my heart ✨
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "center" }}>
+          <div>
+            © {new Date().getFullYear()} <strong>Magic Moments</strong> — Made with all my heart ✨
+          </div>
+          <div style={{ display: "flex", gap: "16px", fontSize: "12px", opacity: 0.85 }}>
+            <Link href="/privacy" style={{ color: "inherit", textDecoration: "underline" }}>
+              Privacy Policy
+            </Link>
+            <span>•</span>
+            <Link href="/terms" style={{ color: "inherit", textDecoration: "underline" }}>
+              Terms of Service
+            </Link>
+          </div>
         </div>
       </footer>
     </main>
