@@ -15,7 +15,16 @@ const birthdayPageSchema = new mongoose.Schema({
   galleryPublicIds: { type: [String], default: [] },
   isPaid: { type: Boolean, default: false },
   paymentId: { type: String, default: '' },
-  orderId: { type: String, default: '' }
+  orderId: { type: String, default: '' },
+  amountPaid: { type: Number, default: 0 },
+  userEmail: { type: String, default: '', lowercase: true, trim: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  reminderSent: { type: Boolean, default: false },
+  reminderSentAt: { type: Date, default: null },
 }, { timestamps: true });
 
-export default mongoose.models.BirthdayPage || mongoose.model('BirthdayPage', birthdayPageSchema);
+if (mongoose.models && mongoose.models.BirthdayPage) {
+  delete mongoose.models.BirthdayPage;
+}
+
+export default mongoose.model('BirthdayPage', birthdayPageSchema);

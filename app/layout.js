@@ -1,6 +1,7 @@
 import { Fredoka, Caveat, Inter } from "next/font/google";
 import Script from "next/script";
 import TrackVisit from "../components/TrackVisit";
+import BrowserSuggestionBanner from "../components/BrowserSuggestionBanner";
 import "./globals.css";
 
 const fredoka = Fredoka({ subsets: ["latin"], variable: "--font-fredoka" });
@@ -55,6 +56,7 @@ export default function RootLayout({ children }) {
       <body
         className={`${fredoka.variable} ${caveat.variable} ${inter.variable}`}>
         <TrackVisit />
+        <BrowserSuggestionBanner />
         {children}
       </body>
     </html>

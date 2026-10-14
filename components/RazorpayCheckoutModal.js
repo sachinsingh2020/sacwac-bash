@@ -22,16 +22,182 @@ function loadRazorpayScript() {
   });
 }
 
+function loadGoogleScript() {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") return resolve(false);
+    if (window.google?.accounts?.id) return resolve(true);
+
+    const existingScript = document.getElementById("google-gsi-client");
+    if (existingScript) return resolve(true);
+
+    const script = document.createElement("script");
+    script.id = "google-gsi-client";
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
 export default function RazorpayCheckoutModal({
   isOpen,
   onClose,
   pagePayload,
   onPaymentSuccess,
+  templateId = "",
 }) {
   const [currency, setCurrency] = useState(() => detectUserCurrencySync());
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [showExitWarning, setShowExitWarning] = useState(false);
+
+  // User Auth & Tier State
+  const [user, setUser] = useState(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [selectedTier, setSelectedTier] = useState("login"); // "login" (₹49) or "guest" (₹199)
+
+  // Email OTP Login Modal / Form State
+  const [showEmailAuth, setShowEmailAuth] = useState(false);
+  const [emailInput, setEmailInput] = useState("");
+  const [otpInput, setOtpInput] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [authSuccessMsg, setAuthSuccessMsg] = useState("");
+
+  // Check existing session
+  useEffect(() => {
+    if (!isOpen) return;
+    setCheckingAuth(true);
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.authenticated && data.user) {
+          setUser(data.user);
+          setSelectedTier("login");
+        } else {
+          setUser(null);
+        }
+      })
+      .catch(() => setUser(null))
+      .finally(() => setCheckingAuth(false));
+  }, [isOpen]);
+
+  // Load Google Identity Services SDK
+  useEffect(() => {
+    if (!isOpen) return;
+    loadGoogleScript().then((loaded) => {
+      if (loaded && window.google?.accounts?.id) {
+        const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "591096592690-3cn1g4fpj1sqcehhnuh2rm4spuilfaro.apps.googleusercontent.com";
+        try {
+          window.google.accounts.id.initialize({
+            client_id: clientId,
+            callback: handleGoogleCredentialResponse,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+          });
+
+          // Render button if container exists
+          const btnContainer = document.getElementById("google-signin-btn-container");
+          if (btnContainer) {
+            window.google.accounts.id.renderButton(btnContainer, {
+              theme: "outline",
+              size: "large",
+              shape: "pill",
+              text: "continue_with",
+              width: 250,
+            });
+          }
+        } catch (gErr) {
+          console.warn("Google initialization error:", gErr);
+        }
+      }
+    });
+  }, [isOpen, user, showEmailAuth]);
+
+  // Handle Google Token Response
+  const handleGoogleCredentialResponse = async (response) => {
+    if (!response?.credential) return;
+    setAuthLoading(true);
+    setAuthError("");
+    try {
+      const res = await fetch("/api/auth/google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential: response.credential }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.user) {
+        throw new Error(data.error || "Google login failed.");
+      }
+      setUser(data.user);
+      setSelectedTier("login");
+      setShowEmailAuth(false);
+    } catch (err) {
+      setAuthError(err.message || "Failed to sign in with Google.");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  // Send Email OTP
+  const handleSendOtp = async (e) => {
+    e?.preventDefault();
+    if (!emailInput.trim() || !emailInput.includes("@")) {
+      setAuthError("Please enter a valid email address.");
+      return;
+    }
+    setAuthLoading(true);
+    setAuthError("");
+    setAuthSuccessMsg("");
+    try {
+      const res = await fetch("/api/auth/email/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailInput }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send code.");
+      setOtpSent(true);
+      setAuthSuccessMsg("Verification code sent! Check your inbox.");
+    } catch (err) {
+      setAuthError(err.message || "Error sending code. Try again.");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  // Verify Email OTP
+  const handleVerifyOtp = async (e) => {
+    e?.preventDefault();
+    if (!otpInput.trim() || otpInput.trim().length !== 6) {
+      setAuthError("Please enter the 6-digit code.");
+      return;
+    }
+    setAuthLoading(true);
+    setAuthError("");
+    try {
+      const res = await fetch("/api/auth/email/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailInput, code: otpInput }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.user) throw new Error(data.error || "Verification failed.");
+      setUser(data.user);
+      setSelectedTier("login");
+      setShowEmailAuth(false);
+      setOtpSent(false);
+      setEmailInput("");
+      setOtpInput("");
+    } catch (err) {
+      setAuthError(err.message || "Invalid verification code.");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
 
   // Auto-detect user region & currency in background
   useEffect(() => {
@@ -66,7 +232,18 @@ export default function RazorpayCheckoutModal({
   const offer = getCurrentMonthOffer(null, currency);
   const pricing = offer.pricing || offer.inr;
 
+  // Active price calculation
+  const isLoginTier = selectedTier === "login";
+  const activeAmountDisplay = isLoginTier ? "₹49" : (currency === "INR" ? "₹199" : pricing.displayPrice);
+
   const handleInitiatePayment = async () => {
+    // If user selected login tier but isn't logged in yet, prompt them to log in
+    if (isLoginTier && !user) {
+      setErrorMsg("Please sign in with Google or Email to claim the ₹49 discounted rate, or choose 'Pay ₹199 without login'.");
+      setShowEmailAuth(true);
+      return;
+    }
+
     setErrorMsg("");
     setLoading(true);
 
@@ -77,11 +254,11 @@ export default function RazorpayCheckoutModal({
         throw new Error("Unable to load Razorpay payment window. Please check your internet connection.");
       }
 
-      // 2. Create server-side order with auto-detected currency
+      // 2. Create server-side order with auto-detected currency and chosen tier
       const orderRes = await fetch("/api/razorpay/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currency }),
+        body: JSON.stringify({ currency, tier: selectedTier }),
       });
 
       const orderData = await orderRes.json();
@@ -93,9 +270,9 @@ export default function RazorpayCheckoutModal({
       if (typeof window !== "undefined" && typeof window.fbq === "function") {
         try {
           window.fbq("track", "InitiateCheckout", {
-            value: pricing.current,
-            currency: currency,
-            content_name: `${offer.month} Offer: Celebration Page`,
+            value: isLoginTier ? 49 : 199,
+            currency: "INR",
+            content_name: `${offer.month} Offer: Celebration Page (${selectedTier})`,
           });
         } catch (e) {}
       }
@@ -106,10 +283,11 @@ export default function RazorpayCheckoutModal({
         amount: orderData.amount,
         currency: orderData.currency,
         name: "Magic Moments",
-        description: `${offer.month} Offer: ${pagePayload.name || "Celebration"} Page`,
+        description: `${offer.month} Special: ${pagePayload.name || "Celebration"} Page`,
         order_id: orderData.orderId,
         prefill: {
           name: pagePayload.name || "",
+          email: user?.email || "",
         },
         theme: {
           color: "#d95775",
@@ -126,6 +304,8 @@ export default function RazorpayCheckoutModal({
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
                 pagePayload,
+                templateId,
+                tier: selectedTier,
               }),
             });
 
@@ -138,14 +318,13 @@ export default function RazorpayCheckoutModal({
             if (typeof window !== "undefined" && typeof window.fbq === "function") {
               try {
                 window.fbq("track", "Purchase", {
-                  value: pricing.current,
-                  currency: currency,
-                  content_name: `${offer.month} Offer: Celebration Page`,
+                  value: isLoginTier ? 49 : 199,
+                  currency: "INR",
+                  content_name: `Celebration Page: ${verifyData.slug}`,
                 });
               } catch (e) {}
             }
 
-            // 5. Celebration is verified & saved! Trigger success callback
             onPaymentSuccess({ slug: verifyData.slug });
           } catch (err) {
             console.error("Verification error:", err);
@@ -209,16 +388,285 @@ export default function RazorpayCheckoutModal({
           <div className="checkout-header">
             <h2 className="checkout-title">Unlock {pagePayload.name || "Their"} Celebration</h2>
             <p className="checkout-sub">
-              Publish this interactive celebration page and receive your official shareable link.
+              Choose your preferred option to publish this interactive celebration page and receive your official shareable link.
             </p>
           </div>
 
-          {/* Dynamic Month Paper Coupon with auto-detected currency & seasonal quote */}
-          <PaperOfferCoupon
-            currency={currency}
-          />
+          {/* Pricing Tier Selector (199 without login vs 49 with login) */}
+          <div className="pricing-tier-container" style={{ margin: "16px 0 20px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              {/* Option A: Pay ₹49 with Login (Recommended) */}
+              <div
+                onClick={() => setSelectedTier("login")}
+                style={{
+                  border: selectedTier === "login" ? "2px solid #d95775" : "1.5px solid #ebd8dc",
+                  background: selectedTier === "login" ? "#fff5f7" : "#ffffff",
+                  borderRadius: "16px",
+                  padding: "16px 14px",
+                  cursor: "pointer",
+                  position: "relative",
+                  transition: "all 0.2s ease",
+                  boxShadow: selectedTier === "login" ? "0 6px 18px rgba(217, 87, 117, 0.15)" : "none",
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "-10px",
+                    right: "12px",
+                    background: "#d95775",
+                    color: "#fff",
+                    fontSize: "9.5px",
+                    fontWeight: 800,
+                    padding: "2px 8px",
+                    borderRadius: "10px",
+                    letterSpacing: "0.5px",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  SAVE ₹150 🔥
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                  <input
+                    type="radio"
+                    name="pricingTier"
+                    checked={selectedTier === "login"}
+                    onChange={() => setSelectedTier("login")}
+                    style={{ accentColor: "#d95775", margin: 0, width: "16px", height: "16px" }}
+                  />
+                  <strong style={{ fontSize: "14px", color: "#361b24" }}>With Login</strong>
+                </div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: "6px", margin: "6px 0 4px" }}>
+                  <span style={{ fontSize: "24px", fontWeight: 800, color: "#d95775" }}>₹49</span>
+                  <span style={{ fontSize: "13px", textDecoration: "line-through", color: "#a0858e" }}>₹199</span>
+                </div>
+                <p style={{ margin: 0, fontSize: "11px", color: "#785863", lineHeight: 1.35 }}>
+                  {user ? `Signed in as ${user.name || user.email}` : "Sign in with Google / Email to unlock ₹49"}
+                </p>
+              </div>
 
-          {/* Feature Highlights (without any lifetime reference) */}
+              {/* Option B: Pay ₹199 continue without login */}
+              <div
+                onClick={() => setSelectedTier("guest")}
+                style={{
+                  border: selectedTier === "guest" ? "2px solid #d95775" : "1.5px solid #ebd8dc",
+                  background: selectedTier === "guest" ? "#fff5f7" : "#ffffff",
+                  borderRadius: "16px",
+                  padding: "16px 14px",
+                  cursor: "pointer",
+                  position: "relative",
+                  transition: "all 0.2s ease",
+                  boxShadow: selectedTier === "guest" ? "0 6px 18px rgba(217, 87, 117, 0.15)" : "none",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                  <input
+                    type="radio"
+                    name="pricingTier"
+                    checked={selectedTier === "guest"}
+                    onChange={() => setSelectedTier("guest")}
+                    style={{ accentColor: "#d95775", margin: 0, width: "16px", height: "16px" }}
+                  />
+                  <strong style={{ fontSize: "14px", color: "#361b24" }}>Without Login</strong>
+                </div>
+                <div style={{ display: "flex", alignItems: "baseline", gap: "6px", margin: "6px 0 4px" }}>
+                  <span style={{ fontSize: "24px", fontWeight: 800, color: "#361b24" }}>₹199</span>
+                  <span style={{ fontSize: "13px", color: "#a0858e" }}>Standard</span>
+                </div>
+                <p style={{ margin: 0, fontSize: "11px", color: "#785863", lineHeight: 1.35 }}>
+                  Instant checkout, no login or account creation needed.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* User Sign-In Box if "login" tier is selected but user is NOT logged in */}
+          {isLoginTier && !user && (
+            <div
+              style={{
+                background: "#fffafb",
+                border: "1.5px dashed #f5a9bc",
+                borderRadius: "16px",
+                padding: "16px 18px",
+                marginBottom: "18px",
+                textAlign: "center",
+              }}
+            >
+              <strong style={{ display: "block", color: "#542533", fontSize: "13.5px", marginBottom: "6px" }}>
+                Sign in to activate your ₹49 member discount:
+              </strong>
+
+              {/* Google One-Tap / Standard Button Container */}
+              <div
+                id="google-signin-btn-container"
+                style={{ display: "flex", justifyContent: "center", minHeight: "42px", margin: "10px 0" }}
+              />
+
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", margin: "10px 0" }}>
+                <span style={{ flex: 1, height: "1px", background: "#f0d5db" }} />
+                <span style={{ fontSize: "11px", color: "#92747e", textTransform: "uppercase" }}>or with email OTP</span>
+                <span style={{ flex: 1, height: "1px", background: "#f0d5db" }} />
+              </div>
+
+              {!showEmailAuth ? (
+                <button
+                  type="button"
+                  onClick={() => setShowEmailAuth(true)}
+                  style={{
+                    background: "#ffffff",
+                    border: "1px solid #d95775",
+                    color: "#d95775",
+                    borderRadius: "20px",
+                    padding: "8px 18px",
+                    fontSize: "12.5px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  ✉️ Sign In with Email OTP
+                </button>
+              ) : (
+                <div style={{ marginTop: "10px", textAlign: "left" }}>
+                  {!otpSent ? (
+                    <form onSubmit={handleSendOtp} style={{ display: "flex", gap: "8px" }}>
+                      <input
+                        type="email"
+                        placeholder="Enter your email address"
+                        value={emailInput}
+                        onChange={(e) => setEmailInput(e.target.value)}
+                        disabled={authLoading}
+                        style={{
+                          flex: 1,
+                          padding: "9px 12px",
+                          borderRadius: "10px",
+                          border: "1px solid #ebd3d8",
+                          fontSize: "13px",
+                          margin: 0,
+                        }}
+                      />
+                      <button
+                        type="submit"
+                        disabled={authLoading}
+                        style={{
+                          background: "#d95775",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: "10px",
+                          padding: "9px 16px",
+                          fontSize: "12.5px",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {authLoading ? "Sending..." : "Send OTP"}
+                      </button>
+                    </form>
+                  ) : (
+                    <form onSubmit={handleVerifyOtp} style={{ display: "flex", gap: "8px" }}>
+                      <input
+                        type="text"
+                        placeholder="6-digit code"
+                        maxLength={6}
+                        value={otpInput}
+                        onChange={(e) => setOtpInput(e.target.value)}
+                        disabled={authLoading}
+                        style={{
+                          width: "120px",
+                          textAlign: "center",
+                          letterSpacing: "4px",
+                          fontWeight: 700,
+                          padding: "9px 12px",
+                          borderRadius: "10px",
+                          border: "1px solid #ebd3d8",
+                          fontSize: "14px",
+                          margin: 0,
+                        }}
+                      />
+                      <button
+                        type="submit"
+                        disabled={authLoading}
+                        style={{
+                          background: "#d95775",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: "10px",
+                          padding: "9px 16px",
+                          fontSize: "12.5px",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {authLoading ? "Verifying..." : "Verify & Unlock ₹49"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOtpSent(false)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#886571",
+                          fontSize: "12px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Resend
+                      </button>
+                    </form>
+                  )}
+                  {authError && (
+                    <div style={{ color: "#e11d48", fontSize: "12px", marginTop: "6px" }}>⚠️ {authError}</div>
+                  )}
+                  {authSuccessMsg && (
+                    <div style={{ color: "#16a34a", fontSize: "12px", marginTop: "6px" }}>✓ {authSuccessMsg}</div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Logged in success badge */}
+          {user && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                background: "#f0fdf4",
+                border: "1px solid #bbf7d0",
+                padding: "8px 14px",
+                borderRadius: "12px",
+                marginBottom: "14px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "16px" }}>👤</span>
+                <span style={{ fontSize: "12.5px", color: "#166534" }}>
+                  Signed in as <strong>{user.name || user.email}</strong> (₹49 unlocked)
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  await fetch("/api/auth/me", { method: "POST" });
+                  setUser(null);
+                }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#dc2626",
+                  fontSize: "11px",
+                  cursor: "pointer",
+                  textDecoration: "underline",
+                }}
+              >
+                Log out
+              </button>
+            </div>
+          )}
+
+          {/* Feature Highlights */}
           <ul className="checkout-features-list">
             <li>
               <span className="feature-check">✓</span>
@@ -255,7 +703,7 @@ export default function RazorpayCheckoutModal({
                 </>
               ) : (
                 <>
-                  <span>Pay {pricing.displayPrice} &amp; Unlock Official Link</span>
+                  <span>Pay {activeAmountDisplay} &amp; Unlock Official Link</span>
                   <span className="pay-arrow">→</span>
                 </>
               )}
@@ -264,7 +712,7 @@ export default function RazorpayCheckoutModal({
             <div className="checkout-trust-badge">
               <span>🔒 Secured by Razorpay</span>
               <span>•</span>
-              <span>{currency === "INR" ? "UPI, GPay, PhonePe & Cards" : "Cards, NetBanking & Digital Wallets"}</span>
+              <span>UPI, GPay, PhonePe, Cards & NetBanking</span>
             </div>
           </div>
         </div>

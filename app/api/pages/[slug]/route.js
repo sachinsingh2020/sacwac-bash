@@ -4,11 +4,20 @@ import BirthdayPage from '../../../../models/BirthdayPage';
 import { cloudinaryPublicIdFromUrl, deleteCloudinaryAsset } from '../../../../lib/cloudinary';
 import { verifyAdminAuth } from '../../../../lib/adminAuth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request, { params }) {
   try {
     await connectToDatabase();
-    const page = await BirthdayPage.findOne({ slug: params.slug }).lean();
-    if (!page) return NextResponse.json({ error: 'Birthday page not found.' }, { status: 404 });
+    const page = await BirthdayPage.findOne({
+      slug: params.slug,
+      $or: [{ isPaid: true }, { paymentId: { $regex: /^pay_/ } }],
+    }).lean();
+
+    if (!page) {
+      return NextResponse.json({ error: 'Valid celebration page not found.' }, { status: 404 });
+    }
+
     return NextResponse.json({ ...page, id: page.slug, _id: undefined });
   } catch (error) {
     console.error('Unable to load birthday page:', error);

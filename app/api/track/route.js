@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '../../../lib/db';
 import VisitorLog from '../../../models/VisitorLog';
+import BirthdayPage from '../../../models/BirthdayPage';
 import { extractClientIp, parseUserAgent } from '../../../lib/geoAndAgent';
 
 export const runtime = 'nodejs';
@@ -23,11 +24,24 @@ export async function POST(request) {
     const userAgentString = request.headers.get('user-agent') || '';
     const ip = extractClientIp(request);
     const agent = parseUserAgent(userAgentString);
+    const cleanSlug = slug.trim();
 
     await connectToDatabase();
 
+    // Check if this visit belongs to a paid link
+    let isPaidLink = false;
+    if (cleanSlug) {
+      const page = await BirthdayPage.findOne({
+        slug: cleanSlug,
+        $or: [{ isPaid: true }, { paymentId: { $regex: /^pay_/ } }],
+      }).select('_id').lean();
+      if (page) {
+        isPaidLink = true;
+      }
+    }
+
     const log = await VisitorLog.create({
-      slug: slug.trim(),
+      slug: cleanSlug,
       pageTitle: pageTitle.trim(),
       url: url.trim(),
       referrer: referrer.trim() || 'Direct / Bookmark',
@@ -42,7 +56,32 @@ export async function POST(request) {
       language: language.trim(),
       visitorId: visitorId.trim(),
       userAgent: userAgentString,
+      isPaidLink,
     });
+
+    // Storage requirement:
+    // "Paid customers data remains forever. Normal visit analytics delete after 2000 records (keep max 2000 normal visits)"
+    if (!isPaidLink) {
+      try {
+        const normalCount = await VisitorLog.countDocuments({ isPaidLink: { $ne: true } });
+        if (normalCount > 2000) {
+          const excess = normalCount - 2000;
+          // Find the oldest excess records and delete them
+          const oldestRecords = await VisitorLog.find({ isPaidLink: { $ne: true } })
+            .sort({ createdAt: 1 })
+            .limit(excess)
+            .select('_id')
+            .lean();
+
+          if (oldestRecords.length > 0) {
+            const idsToDelete = oldestRecords.map((r) => r._id);
+            await VisitorLog.deleteMany({ _id: { $in: idsToDelete } });
+          }
+        }
+      } catch (cleanupErr) {
+        console.warn('Visitor auto-trim error:', cleanupErr.message);
+      }
+    }
 
     return NextResponse.json({
       success: true,

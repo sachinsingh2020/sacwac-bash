@@ -17,12 +17,14 @@ const visitorLogSchema = new mongoose.Schema(
     language: { type: String, default: '' },
     visitorId: { type: String, default: '', index: true }, // Client persistent UUID
     userAgent: { type: String, default: '' },
+    isPaidLink: { type: Boolean, default: false, index: true },
   },
   { timestamps: true }
 );
 
 visitorLogSchema.index({ createdAt: -1 });
 visitorLogSchema.index({ slug: 1, createdAt: -1 });
+visitorLogSchema.index({ isPaidLink: 1, createdAt: -1 });
 
 if (mongoose.models && mongoose.models.VisitorLog) {
   delete mongoose.models.VisitorLog;
