@@ -72,6 +72,8 @@ export default function BirthdayExperience({
   const countdownInfo = useMemo(() => getBirthdayTargetInfo(person), [person]);
   const isLocked = countdownInfo.isLocked && !unlockedManually;
 
+  const [notFound, setNotFound] = useState(false);
+
   useEffect(() => {
     if (previewData) {
       setPerson({ ...fallback, ...previewData });
@@ -95,9 +97,14 @@ export default function BirthdayExperience({
           setUploadedGallery(
             Array.isArray(found.gallery) ? found.gallery.slice(0, 2) : [],
           );
+        } else {
+          setNotFound(true);
         }
       })
-      .catch((error) => console.error("Unable to load birthday page:", error))
+      .catch((error) => {
+        console.error("Unable to load birthday page:", error);
+        setNotFound(true);
+      })
       .finally(() => setLoading(false));
   }, [slug, previewData]);
 
@@ -204,6 +211,47 @@ export default function BirthdayExperience({
   const pop = (index) => {
     if (!popped.includes(index)) setPopped([...popped, index]);
   };
+
+  if (notFound) {
+    return (
+      <main className="experience loading-screen" style={{ textAlign: "center", padding: "24px" }}>
+        <div
+          style={{
+            maxWidth: "460px",
+            background: "#ffffff",
+            padding: "40px 32px",
+            borderRadius: "24px",
+            boxShadow: "0 20px 60px rgba(180, 95, 119, 0.12)",
+            border: "1px solid #f6e2e6",
+          }}
+        >
+          <div style={{ fontSize: "56px", marginBottom: "16px" }}>🎁</div>
+          <h2 style={{ fontSize: "24px", color: "#442430", margin: "0 0 10px", fontWeight: 700 }}>
+            Celebration Page Not Found
+          </h2>
+          <p style={{ fontSize: "14px", color: "#8a6d77", lineHeight: 1.6, margin: "0 0 24px" }}>
+            This custom celebration link is either invalid, expired, or has not been unlocked yet.
+          </p>
+          <a
+            href="/create"
+            style={{
+              display: "inline-block",
+              background: "#d95775",
+              color: "#fff",
+              padding: "12px 24px",
+              borderRadius: "12px",
+              textDecoration: "none",
+              fontWeight: 600,
+              fontSize: "14px",
+              boxShadow: "0 8px 20px rgba(217, 87, 117, 0.25)",
+            }}
+          >
+            Create Your Own Birthday Surprise ✨
+          </a>
+        </div>
+      </main>
+    );
+  }
 
   if (loading)
     return (

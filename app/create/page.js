@@ -74,6 +74,7 @@ export default function BirthdayCreateWizard() {
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [hasSeenPreview, setHasSeenPreview] = useState(false);
+  const [templateId, setTemplateId] = useState(() => "tmpl_" + Math.random().toString(36).substring(2, 10) + Date.now().toString(36));
 
   // Portrait Cropper Modal State
   const [rawPortraitForCrop, setRawPortraitForCrop] = useState(null);
@@ -409,6 +410,18 @@ export default function BirthdayCreateWizard() {
     setErrorMsg("");
     setHasSeenPreview(true);
     setIsPreviewMode(true);
+
+    // Save as draft for 'people who create but didn't buy' tracking
+    try {
+      fetch("/api/templates/draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          templateId,
+          formData,
+        }),
+      }).catch((err) => console.warn("Draft ping error:", err.message));
+    } catch (e) {}
   };
 
   const cleanReasons = formData.reasons
@@ -515,6 +528,7 @@ export default function BirthdayCreateWizard() {
         isOpen={showCheckoutModal}
         onClose={() => setShowCheckoutModal(false)}
         pagePayload={checkoutPayload}
+        templateId={templateId}
         onPaymentSuccess={handlePaymentSuccess}
       />
 

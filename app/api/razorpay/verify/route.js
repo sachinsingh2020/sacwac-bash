@@ -3,6 +3,10 @@ import crypto from 'crypto';
 import Razorpay from 'razorpay';
 import { connectToDatabase } from '../../../../lib/db';
 import BirthdayPage from '../../../../models/BirthdayPage';
+import AbandonedTemplate from '../../../../models/AbandonedTemplate';
+import { verifyToken } from '../../../../lib/jwt';
+
+export const dynamic = 'force-dynamic';
 
 function cleanPayload(body = {}) {
   const dob = body.dob?.toString().trim() || '';
@@ -31,7 +35,9 @@ export async function POST(request) {
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature,
-      pagePayload
+      pagePayload,
+      templateId,
+      tier,
     } = await request.json();
 
     const key_secret = (process.env.RAZORPAY_KEY_SECRET || '').trim();
@@ -52,7 +58,8 @@ export async function POST(request) {
       console.warn('HMAC calculation error:', hmacErr);
     }
 
-    // 2. Direct Razorpay API verification fallback if signature verification failed
+    // 2. Direct Razorpay API verification fallback
+    let paymentAmount = tier === 'login' ? 49 : 199;
     if (!isSignatureValid && key_id && key_secret) {
       try {
         const razorpay = new Razorpay({ key_id, key_secret });
@@ -64,6 +71,7 @@ export async function POST(request) {
         ) {
           console.log('Payment verified via Razorpay API fetch fallback:', payment.id);
           isSignatureValid = true;
+          paymentAmount = payment.amount ? payment.amount / 100 : paymentAmount;
         }
       } catch (fetchErr) {
         console.error('Razorpay payment fetch fallback error:', fetchErr.message);
@@ -81,6 +89,18 @@ export async function POST(request) {
     await connectToDatabase();
     const data = cleanPayload(pagePayload);
 
+    // Get current logged in user from cookie/token if available
+    let userEmail = '';
+    let userId = null;
+    const token = request.cookies.get('user_token')?.value;
+    if (token) {
+      const decoded = verifyToken(token);
+      if (decoded) {
+        userEmail = decoded.email || '';
+        userId = decoded.userId || null;
+      }
+    }
+
     const baseSlug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '') || 'birthday';
     let slug = `${baseSlug}${Math.floor(1000 + Math.random() * 8999)}`;
 
@@ -96,7 +116,22 @@ export async function POST(request) {
       isPaid: true,
       paymentId: razorpay_payment_id,
       orderId: razorpay_order_id,
+      amountPaid: paymentAmount,
+      userEmail,
+      userId,
     });
+
+    // Mark abandoned template as converted if templateId was provided
+    if (templateId) {
+      try {
+        await AbandonedTemplate.updateOne(
+          { templateId },
+          { isConverted: true, userEmail: userEmail || undefined }
+        );
+      } catch (err) {
+        console.warn('Failed to mark template as converted:', err.message);
+      }
+    }
 
     return NextResponse.json({
       success: true,
