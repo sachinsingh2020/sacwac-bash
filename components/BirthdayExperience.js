@@ -308,6 +308,7 @@ export default function BirthdayExperience({
           }}
           sound={sound}
           onToggleSound={() => setSound(!sound)}
+          onPublish={onPublish}
         />
       </>
     );

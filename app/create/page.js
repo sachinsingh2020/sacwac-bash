@@ -1134,14 +1134,29 @@ export default function BirthdayCreateWizard() {
                 Next Step →
               </button>
             ) : (
-              <button
-                type="button"
-                className="btn-wizard-next"
-                onClick={handleStartLocalPreview}
-                disabled={!canGoNext() || loading}
-              >
-                {hasSeenPreview ? "Preview Again 👀" : "Preview Experience 👀"}
-              </button>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  className="btn-wizard-next"
+                  style={{ background: "#fff", color: "#d95775", border: "1.5px solid #d95775", boxShadow: "none" }}
+                  onClick={handleStartLocalPreview}
+                  disabled={!canGoNext() || loading}
+                >
+                  {hasSeenPreview ? "Preview Again 👀" : "Preview Experience 👀"}
+                </button>
+                <button
+                  type="button"
+                  className="btn-wizard-next"
+                  onClick={handleOpenCheckout}
+                  disabled={!canGoNext() || loading}
+                  style={{
+                    background: "linear-gradient(135deg, #d95775 0%, #be3159 100%)",
+                    boxShadow: "0 8px 24px rgba(217, 87, 117, 0.35)",
+                  }}
+                >
+                  ⚡ Unlock &amp; Buy (₹49 / ₹199) →
+                </button>
+              </div>
             )}
           </div>
         )}

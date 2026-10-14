@@ -11,6 +11,7 @@ export default function BirthdayCountdown({
   onPreviewCelebration,
   sound = false,
   onToggleSound,
+  onPublish,
 }) {
   const [countdown, setCountdown] = useState(() => getBirthdayTargetInfo(person));
   const [copied, setCopied] = useState(false);
@@ -269,6 +270,24 @@ export default function BirthdayCountdown({
               aria-label="Preview celebration surprise"
             >
               <span>👀</span> Preview
+            </button>
+          )}
+
+          {isPreview && onPublish && (
+            <button
+              type="button"
+              className="bday-btn-preview"
+              onClick={onPublish}
+              style={{
+                background: "linear-gradient(135deg, #d95775 0%, #be3159 100%)",
+                color: "#fff",
+                border: "none",
+                boxShadow: "0 4px 14px rgba(217, 87, 117, 0.35)",
+              }}
+              title="Unlock and generate official link"
+              aria-label="Unlock and generate official link"
+            >
+              <span>⚡</span> Unlock (₹49 / ₹199)
             </button>
           )}
         </div>
