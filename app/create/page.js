@@ -571,22 +571,21 @@ export default function BirthdayCreateWizard() {
           <span className="wizard-brand-short">✨ Magic Moments</span>
         </div>
         <div className="wizard-header-actions">
-          {isHydrated && hasDraftData && step < 6 && (
-            <>
-              <span className="wizard-saved-pill" title="All your entered data is automatically saved!">
-                ✓ Auto-Saved
-              </span>
-              <button
-                type="button"
-                className="wizard-reset-draft-btn"
-                onClick={handleResetDraft}
-                title="Clear all inputs and start over"
-              >
-                <span className="reset-draft-text-full">Clear Form ↺</span>
-                <span className="reset-draft-text-short">Clear ↺</span>
-              </button>
-            </>
+          {isHydrated && hasDraftData && (
+            <span className="wizard-saved-pill" title="All your entered data is automatically saved!">
+              ✓ Auto-Saved
+            </span>
           )}
+          <button
+            type="button"
+            className="wizard-reset-draft-btn"
+            onClick={handleResetDraft}
+            title="Clear all inputs and start over"
+            aria-label="Clear form and reset all inputs"
+          >
+            <span className="reset-draft-text-full">Clear Form ↺</span>
+            <span className="reset-draft-text-short">Clear Form ↺</span>
+          </button>
         </div>
       </header>
 
