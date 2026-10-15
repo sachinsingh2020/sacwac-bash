@@ -112,6 +112,23 @@ export default function VisitorAnalyticsView({ adminToken }) {
     }
   };
 
+  // Lock body scroll and allow ESC key to exit fullscreen preview
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && previewingTemplate) {
+        setPreviewingTemplate(null);
+      }
+    };
+    if (previewingTemplate) {
+      window.addEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "hidden";
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [previewingTemplate]);
+
   // Filter paid buyers by search
   const filteredBuyers = useMemo(() => {
     const list = data.paidBuyers || [];
@@ -957,44 +974,81 @@ export default function VisitorAnalyticsView({ adminToken }) {
         </section>
       )}
 
-      {/* Abandoned Template Preview Modal */}
+      {/* Abandoned Template Fullscreen Preview Portal */}
       {previewingTemplate && (
-        <div className="analytics-modal-backdrop" onClick={() => setPreviewingTemplate(null)}>
-          <div
-            className="analytics-modal"
-            style={{ width: "95vw", height: "92vh", maxWidth: "1200px" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="analytics-modal-header">
-              <div>
-                <h3>Created Template: {previewingTemplate.name}</h3>
-                <p>Status: Drafted by user (Did not buy)</p>
-              </div>
+        <div
+          className="admin-preview-fullscreen-portal"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Preview template for ${previewingTemplate.name}`}
+        >
+          {/* Floating Sleek Admin Toolbar */}
+          <header className="admin-preview-floating-bar">
+            <div className="admin-preview-bar-left">
               <button
                 type="button"
-                className="analytics-modal-close-btn"
+                className="admin-preview-back-btn"
                 onClick={() => setPreviewingTemplate(null)}
+                title="Return to Admin Dashboard (or press ESC)"
+              >
+                <span>← Exit Preview</span>
+              </button>
+            </div>
+
+            <div className="admin-preview-bar-center">
+              <span className="admin-preview-dot-pulse" />
+              <div className="admin-preview-info-text">
+                <span className="admin-preview-badge">Draft Template</span>
+                <span className="admin-preview-name">{previewingTemplate.name}</span>
+                {previewingTemplate.age && (
+                  <span className="admin-preview-meta">({previewingTemplate.age} yrs)</span>
+                )}
+                {(previewingTemplate.dob || previewingTemplate.date) && (
+                  <span className="admin-preview-meta">
+                    • DOB: {previewingTemplate.dob || previewingTemplate.date}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="admin-preview-bar-right">
+              {previewingTemplate.userEmail ? (
+                <span className="admin-preview-email-tag" title={previewingTemplate.userEmail}>
+                  ✉️ {previewingTemplate.userEmail}
+                </span>
+              ) : (
+                <span className="admin-preview-guest-tag">👤 Guest</span>
+              )}
+              <button
+                type="button"
+                className="admin-preview-close-circle"
+                onClick={() => setPreviewingTemplate(null)}
+                aria-label="Close Preview"
+                title="Close Preview (ESC)"
               >
                 ✕
               </button>
             </div>
-            <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-              <BirthdayExperience
-                isPreview={true}
-                previewData={{
-                  name: previewingTemplate.name,
-                  nickname: previewingTemplate.nickname || previewingTemplate.name,
-                  dob: previewingTemplate.dob,
-                  age: previewingTemplate.age,
-                  date: previewingTemplate.date,
-                  message: previewingTemplate.message,
-                  reasons: previewingTemplate.reasons,
-                  photo: previewingTemplate.photo,
-                  gallery: previewingTemplate.gallery,
-                }}
-                onExitPreview={() => setPreviewingTemplate(null)}
-              />
-            </div>
+          </header>
+
+          {/* Fullscreen Interactive Celebration Canvas */}
+          <div className="admin-preview-canvas-holder">
+            <BirthdayExperience
+              isPreview={true}
+              isAdminPreview={true}
+              previewData={{
+                name: previewingTemplate.name,
+                nickname: previewingTemplate.nickname || previewingTemplate.name,
+                dob: previewingTemplate.dob,
+                age: previewingTemplate.age,
+                date: previewingTemplate.date,
+                message: previewingTemplate.message,
+                reasons: previewingTemplate.reasons,
+                photo: previewingTemplate.photo,
+                gallery: previewingTemplate.gallery,
+              }}
+              onExitPreview={() => setPreviewingTemplate(null)}
+            />
           </div>
         </div>
       )}

@@ -41,6 +41,7 @@ export default function BirthdayExperience({
   slug,
   previewData = null,
   isPreview = false,
+  isAdminPreview = false,
   onExitPreview,
   onPublish,
   isPublishing = false,
@@ -316,8 +317,8 @@ export default function BirthdayExperience({
 
   return (
     <>
-      <main className={`experience phase-${phase} ${isPreview ? "has-preview-bar is-preview-mode" : ""}`}>
-        {isPreview && (
+      <main className={`experience phase-${phase} ${isPreview && !isAdminPreview ? "has-preview-bar is-preview-mode" : ""}`}>
+        {isPreview && !isAdminPreview && (
           <aside className="preview-top-bar" role="banner" aria-label="Preview toolbar">
             <div className="preview-bar-left">
               <button
@@ -400,7 +401,7 @@ export default function BirthdayExperience({
           autoPlay
           preload="auto"
         />
-        {!isPreview && (
+        {(!isPreview || isAdminPreview) && (
           <button
             type="button"
             className={`sound-toggle ${sound ? "is-playing" : "is-muted"}`}
@@ -575,8 +576,27 @@ export default function BirthdayExperience({
               aria-label="Close share modal">
               ✕
             </button>
-            <div className="exp-share-icon" aria-hidden="true">💌</div>
-            {isPreview ? (
+            {isAdminPreview ? (
+              <>
+                <h2>Draft Celebration for {person.name}</h2>
+                <p>
+                  This template was drafted and tested by a user, but has not been purchased yet.
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "18px" }}>
+                  <button
+                    type="button"
+                    className="exp-share-copy-btn"
+                    style={{ background: "#d95775", color: "#fff", width: "100%", justifyContent: "center", padding: "12px 18px", border: 0, borderRadius: "12px", cursor: "pointer", fontWeight: 700 }}
+                    onClick={() => {
+                      setShowShareModal(false);
+                      if (onExitPreview) onExitPreview();
+                    }}
+                  >
+                    ✕ Exit Preview
+                  </button>
+                </div>
+              </>
+            ) : isPreview ? (
               <>
                 <h2>Ready to Share with {person.name}?</h2>
                 <p>
