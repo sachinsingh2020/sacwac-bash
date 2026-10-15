@@ -129,14 +129,6 @@
   box-shadow: 0 1px 4px rgba(217, 87, 117, 0.08);
 }
 
-.reset-draft-text-full {
-  display: inline;
-}
-
-.reset-draft-text-short {
-  display: inline;
-}
-
 .wizard-reset-draft-btn:hover {
   background: #ffe4e6;
   color: #e11d48;
@@ -152,12 +144,6 @@
     display: none;
   }
   .wizard-brand-short {
-    display: inline;
-  }
-  .reset-draft-text-full {
-    display: inline;
-  }
-  .reset-draft-text-short {
     display: inline;
   }
   .wizard-brand-tag {

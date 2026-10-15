@@ -583,8 +583,7 @@ export default function BirthdayCreateWizard() {
             title="Clear all inputs and start over"
             aria-label="Clear form and reset all inputs"
           >
-            <span className="reset-draft-text-full">Clear Form ↺</span>
-            <span className="reset-draft-text-short">Clear Form ↺</span>
+            <span>Clear Form ↺</span>
           </button>
         </div>
       </header>
