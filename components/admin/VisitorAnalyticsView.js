@@ -31,10 +31,12 @@ export default function VisitorAnalyticsView({ adminToken }) {
 
   // People who created but didn't buy state
   const [abandonedTemplates, setAbandonedTemplates] = useState([]);
+  const [loadingAbandoned, setLoadingAbandoned] = useState(true);
   const [previewingTemplate, setPreviewingTemplate] = useState(null);
 
   // Logged-in users state
   const [usersList, setUsersList] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
   const [userSearchQuery, setUserSearchQuery] = useState("");
 
   // Search queries for abandoned tabs
@@ -73,6 +75,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
   }, [adminToken, selectedSlug, customDate]);
 
   const fetchAbandonedTemplates = useCallback(async () => {
+    setLoadingAbandoned(true);
     try {
       const headers = {};
       if (adminToken) headers["x-admin-token"] = adminToken;
@@ -83,10 +86,13 @@ export default function VisitorAnalyticsView({ adminToken }) {
       }
     } catch (err) {
       console.error("Failed to load abandoned templates:", err);
+    } finally {
+      setLoadingAbandoned(false);
     }
   }, [adminToken]);
 
   const fetchUsers = useCallback(async () => {
+    setLoadingUsers(true);
     try {
       const headers = {};
       if (adminToken) headers["x-admin-token"] = adminToken;
@@ -97,6 +103,8 @@ export default function VisitorAnalyticsView({ adminToken }) {
       }
     } catch (err) {
       console.error("Failed to load users:", err);
+    } finally {
+      setLoadingUsers(false);
     }
   }, [adminToken]);
 
@@ -351,7 +359,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
           <span>💳</span>
           <span>Successful Buyers</span>
           <span className="analytics-tab-pill-badge badge-green">
-            🎉 {data.paidBuyersCount || 0}
+            {loading ? "..." : `🎉 ${data.paidBuyersCount || 0}`}
           </span>
         </button>
 
@@ -363,7 +371,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
           <span>👀</span>
           <span>people who create but didn&apos;t buy</span>
           <span className="analytics-tab-pill-badge" style={{ background: "#fff0f3", color: "#d95775" }}>
-            {abandonedTemplates.length}
+            {loadingAbandoned ? "..." : abandonedTemplates.length}
           </span>
         </button>
 
@@ -375,7 +383,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
           <span>✉️</span>
           <span>Created &amp; Logged In (Didn&apos;t Buy)</span>
           <span className="analytics-tab-pill-badge" style={{ background: "#eff6ff", color: "#2563eb" }}>
-            {abandonedTemplates.filter((t) => t.userEmail && t.userEmail.trim()).length}
+            {loadingAbandoned ? "..." : abandonedTemplates.filter((t) => t.userEmail && t.userEmail.trim()).length}
           </span>
         </button>
 
@@ -387,7 +395,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
           <span>👥</span>
           <span>Logged In Users</span>
           <span className="analytics-tab-pill-badge" style={{ background: "#eff6ff", color: "#2563eb" }}>
-            {usersList.length}
+            {loadingUsers ? "..." : usersList.length}
           </span>
         </button>
 
@@ -399,7 +407,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
           <span>📋</span>
           <span>Visitor Analytics</span>
           <span className="analytics-tab-pill-badge">
-            {data.summary?.total || 0}
+            {loading ? "..." : (data.summary?.total || 0)}
           </span>
         </button>
       </div>
@@ -459,222 +467,232 @@ export default function VisitorAnalyticsView({ adminToken }) {
             </div>
           )}
 
-          {/* Quick Metrics for Paid Orders - Single Row of Small Cards */}
-          <div className="buyers-stats-row">
-            <div className="buyers-compact-card">
-              <div className="buyers-compact-icon" style={{ background: "#fef0f3" }}>🎉</div>
-              <div className="buyers-compact-body">
-                <span className="buyers-compact-label">Paid Celebrations</span>
-                <div className="buyers-compact-value">{data.paidBuyersCount || 0}</div>
-                <span className="buyers-compact-sub">Verified customer orders</span>
-              </div>
+          {loading ? (
+            <div className="analytics-page-loader">
+              <div className="analytics-circle-spinner" />
+              <h3 className="analytics-loader-title">Loading Successful Buyers...</h3>
+              <p className="analytics-loader-sub">Fetching verified customer orders, payments, and live celebration links</p>
             </div>
-
-            <div className="buyers-compact-card">
-              <div className="buyers-compact-icon" style={{ background: "#fdf6e9" }}>💰</div>
-              <div className="buyers-compact-body">
-                <span className="buyers-compact-label">Total Revenue</span>
-                <div className="buyers-compact-value">
-                  ₹{(data.paidBuyers || []).reduce((sum, b) => sum + (b.amountPaid || 199), 0)}
+          ) : (
+            <>
+              {/* Quick Metrics for Paid Orders - Single Row of Small Cards */}
+              <div className="buyers-stats-row">
+                <div className="buyers-compact-card">
+                  <div className="buyers-compact-icon" style={{ background: "#fef0f3" }}>🎉</div>
+                  <div className="buyers-compact-body">
+                    <span className="buyers-compact-label">Paid Celebrations</span>
+                    <div className="buyers-compact-value">{data.paidBuyersCount || 0}</div>
+                    <span className="buyers-compact-sub">Verified customer orders</span>
+                  </div>
                 </div>
-                <span className="buyers-compact-sub">Permanent customer records</span>
-              </div>
-            </div>
 
-            <div className="buyers-compact-card">
-              <div className="buyers-compact-icon" style={{ background: "#edf9f1" }}>👁️</div>
-              <div className="buyers-compact-body">
-                <span className="buyers-compact-label">Paid Links Traffic</span>
-                <div className="buyers-compact-value">{totalPaidViews}</div>
-                <span className="buyers-compact-sub">Total views on paid links</span>
-              </div>
-            </div>
-
-            <div className="buyers-compact-card">
-              <div className="buyers-compact-icon" style={{ background: "#f2f3fd" }}>⏳</div>
-              <div className="buyers-compact-body">
-                <span className="buyers-compact-label">Latest Order</span>
-                <div className="buyers-compact-value" style={{ fontSize: "15px" }}>
-                  {data.paidBuyers && data.paidBuyers.length > 0
-                    ? formatTimestamp(data.paidBuyers[0].createdAt).split(",")[0]
-                    : "No orders yet"}
+                <div className="buyers-compact-card">
+                  <div className="buyers-compact-icon" style={{ background: "#fdf6e9" }}>💰</div>
+                  <div className="buyers-compact-body">
+                    <span className="buyers-compact-label">Total Revenue</span>
+                    <div className="buyers-compact-value">
+                      ₹{(data.paidBuyers || []).reduce((sum, b) => sum + (b.amountPaid || 199), 0)}
+                    </div>
+                    <span className="buyers-compact-sub">Permanent customer records</span>
+                  </div>
                 </div>
-                <span className="buyers-compact-sub">Most recent verified buyer</span>
+
+                <div className="buyers-compact-card">
+                  <div className="buyers-compact-icon" style={{ background: "#edf9f1" }}>👁️</div>
+                  <div className="buyers-compact-body">
+                    <span className="buyers-compact-label">Paid Links Traffic</span>
+                    <div className="buyers-compact-value">{totalPaidViews}</div>
+                    <span className="buyers-compact-sub">Total views on paid links</span>
+                  </div>
+                </div>
+
+                <div className="buyers-compact-card">
+                  <div className="buyers-compact-icon" style={{ background: "#f2f3fd" }}>⏳</div>
+                  <div className="buyers-compact-body">
+                    <span className="buyers-compact-label">Latest Order</span>
+                    <div className="buyers-compact-value" style={{ fontSize: "15px" }}>
+                      {data.paidBuyers && data.paidBuyers.length > 0
+                        ? formatTimestamp(data.paidBuyers[0].createdAt).split(",")[0]
+                        : "No orders yet"}
+                    </div>
+                    <span className="buyers-compact-sub">Most recent verified buyer</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Buyers Table Card */}
-          <div className="analytics-table-card">
-            <div className="analytics-table-head-row">
-              <h3 className="analytics-table-title">
-                <span>💎 Verified Buyers &amp; Live Celebration Links</span>
-                <span className="count">({filteredBuyers.length} buyers)</span>
-              </h3>
+              {/* Buyers Table Card */}
+              <div className="analytics-table-card">
+                <div className="analytics-table-head-row">
+                  <h3 className="analytics-table-title">
+                    <span>💎 Verified Buyers &amp; Live Celebration Links</span>
+                    <span className="count">({filteredBuyers.length} buyers)</span>
+                  </h3>
 
-              <input
-                type="text"
-                className="analytics-search-input"
-                placeholder="Search name, slug, payment ID..."
-                value={buyerSearchQuery}
-                onChange={(e) => setBuyerSearchQuery(e.target.value)}
-              />
-            </div>
+                  <input
+                    type="text"
+                    className="analytics-search-input"
+                    placeholder="Search name, slug, payment ID..."
+                    value={buyerSearchQuery}
+                    onChange={(e) => setBuyerSearchQuery(e.target.value)}
+                  />
+                </div>
 
-            {filteredBuyers.length === 0 ? (
-              <div className="analytics-empty">
-                <div className="analytics-empty-icon">💎</div>
-                <strong>No successful buyers match your filter.</strong>
-                <p>When visitors complete their ₹49 or ₹199 purchase, their details and live links will appear here permanently.</p>
-              </div>
-            ) : (
-              <div className="analytics-table-wrap">
-                <table className="analytics-table">
-                  <thead>
-                    <tr>
-                      <th>Celebrant &amp; Buyer</th>
-                      <th>Shareable Link</th>
-                      <th>Amount &amp; Payment ID</th>
-                      <th>Birthday Date</th>
-                      <th>Traffic to Link</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredBuyers.map((b) => (
-                      <tr key={b.id || b.slug}>
-                        <td>
-                          <div className="buyer-profile-cell">
-                            {b.photo ? (
-                              <img src={b.photo} alt={b.name} className="buyer-thumb-avatar" />
-                            ) : (
-                              <div className="buyer-monogram-avatar">
-                                {b.name ? b.name[0].toUpperCase() : "🎂"}
+                {filteredBuyers.length === 0 ? (
+                  <div className="analytics-empty">
+                    <div className="analytics-empty-icon">💎</div>
+                    <strong>No successful buyers match your filter.</strong>
+                    <p>When visitors complete their ₹49 or ₹199 purchase, their details and live links will appear here permanently.</p>
+                  </div>
+                ) : (
+                  <div className="analytics-table-wrap">
+                    <table className="analytics-table">
+                      <thead>
+                        <tr>
+                          <th>Celebrant &amp; Buyer</th>
+                          <th>Shareable Link</th>
+                          <th>Amount &amp; Payment ID</th>
+                          <th>Birthday Date</th>
+                          <th>Traffic to Link</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredBuyers.map((b) => (
+                          <tr key={b.id || b.slug}>
+                            <td>
+                              <div className="buyer-profile-cell">
+                                {b.photo ? (
+                                  <img src={b.photo} alt={b.name} className="buyer-thumb-avatar" />
+                                ) : (
+                                  <div className="buyer-monogram-avatar">
+                                    {b.name ? b.name[0].toUpperCase() : "🎂"}
+                                  </div>
+                                )}
+                                <div>
+                                  <strong>{b.name}</strong>
+                                  {b.nickname && <span className="buyer-nickname">&ldquo;{b.nickname}&rdquo;</span>}
+                                  {b.userEmail && (
+                                    <span style={{ display: "block", fontSize: "11px", color: "#6b4f59" }}>
+                                      ✉️ {b.userEmail}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                            )}
-                            <div>
-                              <strong>{b.name}</strong>
-                              {b.nickname && <span className="buyer-nickname">&ldquo;{b.nickname}&rdquo;</span>}
-                              {b.userEmail && (
-                                <span style={{ display: "block", fontSize: "11px", color: "#6b4f59" }}>
-                                  ✉️ {b.userEmail}
+                            </td>
+
+                            <td>
+                              <div className="buyer-link-pill-group">
+                                <a
+                                  href={`/${b.slug}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="analytics-slug-chip"
+                                >
+                                  /{b.slug}
+                                </a>
+                                <button
+                                  type="button"
+                                  className="buyer-copy-btn"
+                                  onClick={() => handleCopyLink(b.slug)}
+                                  title="Copy public link"
+                                >
+                                  {copiedSlug === b.slug ? "✓ Copied" : "Copy"}
+                                </button>
+                              </div>
+                            </td>
+
+                            <td>
+                              <div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                  <span style={{ fontWeight: 800, color: b.amountPaid === 49 ? "#d95775" : "#16a34a", fontSize: "14px" }}>
+                                    ₹{b.amountPaid !== undefined && b.amountPaid !== null ? b.amountPaid : 199}
+                                  </span>
+                                  <span
+                                    style={{
+                                      fontSize: "10px",
+                                      fontWeight: 700,
+                                      padding: "2px 6px",
+                                      borderRadius: "6px",
+                                      background: b.amountPaid === 49 ? "#fff0f3" : "#f0fdf4",
+                                      color: b.amountPaid === 49 ? "#d95775" : "#166534",
+                                      border: b.amountPaid === 49 ? "1px solid #ffd6e1" : "1px solid #bbf7d0",
+                                    }}
+                                  >
+                                    {b.amountPaid === 49 ? "Login (₹49)" : "Standard (₹199)"}
+                                  </span>
+                                </div>
+                                <div style={{ marginTop: "4px" }}>
+                                  <span className="analytics-ip-code" style={{ fontSize: "11px" }}>
+                                    {b.paymentId || "N/A"}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+
+                            <td>
+                              <span style={{ fontSize: "12px", color: "#613b48", fontWeight: 600 }}>
+                                📅 {b.date || b.dob || "Not set"}
+                              </span>
+                            </td>
+
+                            <td>
+                              <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                                <span className="badge-num" style={{ background: "#fef0f3", color: "#d95775" }}>
+                                  {b.totalVisits || 0} views
                                 </span>
-                              )}
-                            </div>
-                          </div>
-                        </td>
+                                <span style={{ fontSize: "11px", color: "#8a6e76" }}>
+                                  ({b.uniqueVisitors || 0} unique)
+                                </span>
+                              </div>
+                            </td>
 
-                        <td>
-                          <div className="buyer-link-pill-group">
-                            <a
-                              href={`/${b.slug}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="analytics-slug-chip"
-                            >
-                              /{b.slug}
-                            </a>
-                            <button
-                              type="button"
-                              className="buyer-copy-btn"
-                              onClick={() => handleCopyLink(b.slug)}
-                              title="Copy public link"
-                            >
-                              {copiedSlug === b.slug ? "✓ Copied" : "Copy"}
-                            </button>
-                          </div>
-                        </td>
-
-                        <td>
-                          <div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                              <span style={{ fontWeight: 800, color: b.amountPaid === 49 ? "#d95775" : "#16a34a", fontSize: "14px" }}>
-                                ₹{b.amountPaid !== undefined && b.amountPaid !== null ? b.amountPaid : 199}
-                              </span>
-                              <span
-                                style={{
-                                  fontSize: "10px",
-                                  fontWeight: 700,
-                                  padding: "2px 6px",
-                                  borderRadius: "6px",
-                                  background: b.amountPaid === 49 ? "#fff0f3" : "#f0fdf4",
-                                  color: b.amountPaid === 49 ? "#d95775" : "#166534",
-                                  border: b.amountPaid === 49 ? "1px solid #ffd6e1" : "1px solid #bbf7d0",
-                                }}
-                              >
-                                {b.amountPaid === 49 ? "Login (₹49)" : "Standard (₹199)"}
-                              </span>
-                            </div>
-                            <div style={{ marginTop: "4px" }}>
-                              <span className="analytics-ip-code" style={{ fontSize: "11px" }}>
-                                {b.paymentId || "N/A"}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td>
-                          <span style={{ fontSize: "12px", color: "#613b48", fontWeight: 600 }}>
-                            📅 {b.date || b.dob || "Not set"}
-                          </span>
-                        </td>
-
-                        <td>
-                          <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                            <span className="badge-num" style={{ background: "#fef0f3", color: "#d95775" }}>
-                              {b.totalVisits || 0} views
-                            </span>
-                            <span style={{ fontSize: "11px", color: "#8a6e76" }}>
-                              ({b.uniqueVisitors || 0} unique)
-                            </span>
-                          </div>
-                        </td>
-
-                        <td>
-                          <div style={{ display: "flex", gap: "6px" }}>
-                            <a
-                              href={`/${b.slug}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="analytics-view-btn"
-                              title="Open live celebration page"
-                            >
-                              View Live
-                            </a>
-                            <button
-                              type="button"
-                              className="analytics-view-btn"
-                              onClick={() => handleInspectBuyerTraffic(b.slug)}
-                              title="Filter visitor logs to this link"
-                            >
-                              Logs
-                            </button>
-                            <button
-                              type="button"
-                              className="analytics-view-btn analytics-delete-action-btn"
-                              onClick={() =>
-                                promptDelete(
-                                  "buyer",
-                                  b._id,
-                                  b.name,
-                                  `Slug: /${b.slug} • Payment ID: ${b.paymentId || "N/A"}`,
-                                  b.slug,
-                                  true
-                                )
-                              }
-                              title="Permanently delete this buyer page and its Cloudinary photos"
-                            >
-                              🗑️ Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                            <td>
+                              <div style={{ display: "flex", gap: "6px" }}>
+                                <a
+                                  href={`/${b.slug}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="analytics-view-btn"
+                                  title="Open live celebration page"
+                                >
+                                  View Live
+                                </a>
+                                <button
+                                  type="button"
+                                  className="analytics-view-btn"
+                                  onClick={() => handleInspectBuyerTraffic(b.slug)}
+                                  title="Filter visitor logs to this link"
+                                >
+                                  Logs
+                                </button>
+                                <button
+                                  type="button"
+                                  className="analytics-view-btn analytics-delete-action-btn"
+                                  onClick={() =>
+                                    promptDelete(
+                                      "buyer",
+                                      b._id,
+                                      b.name,
+                                      `Slug: /${b.slug} • Payment ID: ${b.paymentId || "N/A"}`,
+                                      b.slug,
+                                      true
+                                    )
+                                  }
+                                  title="Permanently delete this buyer page and its Cloudinary photos"
+                                >
+                                  🗑️ Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          )}
         </section>
       )}
 
@@ -697,12 +715,20 @@ export default function VisitorAnalyticsView({ adminToken }) {
               type="button"
               className="analytics-refresh-btn"
               onClick={fetchAbandonedTemplates}
+              disabled={loadingAbandoned}
             >
-              ↻ Refresh Templates
+              {loadingAbandoned ? "Refreshing..." : "↻ Refresh Templates"}
             </button>
           </div>
 
-          <div className="analytics-table-card">
+          {loadingAbandoned ? (
+            <div className="analytics-page-loader">
+              <div className="analytics-circle-spinner" />
+              <h3 className="analytics-loader-title">Loading Celebration Drafts...</h3>
+              <p className="analytics-loader-sub">Fetching visitors who created templates and tested preview without buying</p>
+            </div>
+          ) : (
+            <div className="analytics-table-card">
             <div className="analytics-table-head-row">
               <h3 className="analytics-table-title">
                 <span>📝 Drafted Celebrations ({filteredAbandoned.length})</span>
@@ -826,6 +852,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
               </div>
             )}
           </div>
+          )}
         </section>
       )}
 
@@ -848,12 +875,20 @@ export default function VisitorAnalyticsView({ adminToken }) {
               type="button"
               className="analytics-refresh-btn"
               onClick={fetchAbandonedTemplates}
+              disabled={loadingAbandoned}
             >
-              ↻ Refresh List
+              {loadingAbandoned ? "Refreshing..." : "↻ Refresh List"}
             </button>
           </div>
 
-          <div className="analytics-table-card">
+          {loadingAbandoned ? (
+            <div className="analytics-page-loader">
+              <div className="analytics-circle-spinner" />
+              <h3 className="analytics-loader-title">Loading High-Intent Logged-In Leads...</h3>
+              <p className="analytics-loader-sub">Fetching logged-in users with saved celebration drafts and emails</p>
+            </div>
+          ) : (
+            <div className="analytics-table-card">
             <div className="analytics-table-head-row">
               <h3 className="analytics-table-title">
                 <span>🎯 High-Intent Logged-In Leads ({loggedInAbandoned.length})</span>
@@ -984,6 +1019,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
               </div>
             )}
           </div>
+          )}
         </section>
       )}
 
@@ -1006,12 +1042,20 @@ export default function VisitorAnalyticsView({ adminToken }) {
               type="button"
               className="analytics-refresh-btn"
               onClick={fetchUsers}
+              disabled={loadingUsers}
             >
-              ↻ Refresh Users
+              {loadingUsers ? "Refreshing..." : "↻ Refresh Users"}
             </button>
           </div>
 
-          <div className="analytics-table-card">
+          {loadingUsers ? (
+            <div className="analytics-page-loader">
+              <div className="analytics-circle-spinner" />
+              <h3 className="analytics-loader-title">Loading Registered Users...</h3>
+              <p className="analytics-loader-sub">Fetching user directory and authentication profiles</p>
+            </div>
+          ) : (
+            <div className="analytics-table-card">
             <div className="analytics-table-head-row">
               <h3 className="analytics-table-title">
                 <span>📧 Registered Users ({filteredUsers.length})</span>
@@ -1120,6 +1164,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
               </div>
             )}
           </div>
+          )}
         </section>
       )}
 
@@ -1160,8 +1205,14 @@ export default function VisitorAnalyticsView({ adminToken }) {
             </div>
           </div>
 
-          {/* Detailed Visitor Records Table */}
-          <div className="analytics-table-card" id="visitor-records-section">
+          {loading ? (
+            <div className="analytics-page-loader">
+              <div className="analytics-circle-spinner" />
+              <h3 className="analytics-loader-title">Loading Visitor Traffic Logs...</h3>
+              <p className="analytics-loader-sub">Fetching IP logs, device details, and page views</p>
+            </div>
+          ) : (
+            <div className="analytics-table-card" id="visitor-records-section">
             <div className="analytics-table-head-row">
               <h3 className="analytics-table-title">
                 <span>📋 Detailed Visitor Records</span>
@@ -1326,6 +1377,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
               </div>
             )}
           </div>
+          )}
         </section>
       )}
 
