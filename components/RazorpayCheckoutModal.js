@@ -27,17 +27,47 @@ function loadGoogleScript() {
     if (typeof window === "undefined") return resolve(false);
     if (window.google?.accounts?.id) return resolve(true);
 
-    const existingScript = document.getElementById("google-gsi-client");
-    if (existingScript) return resolve(true);
+    let script = document.getElementById("google-gsi-client");
+    if (!script) {
+      script = document.createElement("script");
+      script.id = "google-gsi-client";
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      document.body.appendChild(script);
+    }
 
-    const script = document.createElement("script");
-    script.id = "google-gsi-client";
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
+    if (window.google?.accounts?.id) return resolve(true);
+
+    const onReady = () => {
+      let attempts = 0;
+      const interval = setInterval(() => {
+        attempts++;
+        if (window.google?.accounts?.id) {
+          clearInterval(interval);
+          resolve(true);
+        } else if (attempts > 30) {
+          clearInterval(interval);
+          resolve(false);
+        }
+      }, 50);
+    };
+
+    script.addEventListener("load", onReady, { once: true });
+    script.addEventListener("error", () => resolve(false), { once: true });
+
+    // Fallback polling in case the script tag already fired load
+    let pollCount = 0;
+    const pollInterval = setInterval(() => {
+      pollCount++;
+      if (window.google?.accounts?.id) {
+        clearInterval(pollInterval);
+        resolve(true);
+      } else if (pollCount > 60) {
+        clearInterval(pollInterval);
+        resolve(false);
+      }
+    }, 100);
   });
 }
 
@@ -56,6 +86,7 @@ export default function RazorpayCheckoutModal({
   // User Auth & Tier State
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [googleBtnLoaded, setGoogleBtnLoaded] = useState(false);
   const [selectedTier, setSelectedTier] = useState("login"); // "login" (₹49) or "guest" (₹199)
 
   // Email OTP Login Modal / Form State
@@ -87,8 +118,16 @@ export default function RazorpayCheckoutModal({
 
   // Load Google Identity Services SDK
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || user || showEmailAuth) {
+      setGoogleBtnLoaded(false);
+      return;
+    }
+
+    let isCancelled = false;
+    setGoogleBtnLoaded(false);
+
     loadGoogleScript().then((loaded) => {
+      if (isCancelled) return;
       if (loaded && window.google?.accounts?.id) {
         const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "591096592690-3cn1g4fpj1sqcehhnuh2rm4spuilfaro.apps.googleusercontent.com";
         try {
@@ -100,21 +139,34 @@ export default function RazorpayCheckoutModal({
           });
 
           // Render button if container exists
-          const btnContainer = document.getElementById("google-signin-btn-container");
-          if (btnContainer) {
-            window.google.accounts.id.renderButton(btnContainer, {
-              theme: "outline",
-              size: "large",
-              shape: "pill",
-              text: "continue_with",
-              width: 250,
-            });
-          }
+          const renderBtn = () => {
+            if (isCancelled) return;
+            const btnContainer = document.getElementById("google-signin-btn-container");
+            if (btnContainer && window.google?.accounts?.id) {
+              btnContainer.innerHTML = "";
+              window.google.accounts.id.renderButton(btnContainer, {
+                theme: "outline",
+                size: "large",
+                shape: "pill",
+                text: "continue_with",
+                width: 250,
+              });
+              setGoogleBtnLoaded(true);
+            }
+          };
+
+          renderBtn();
+          const timer = setTimeout(renderBtn, 80);
+          return () => clearTimeout(timer);
         } catch (gErr) {
           console.warn("Google initialization error:", gErr);
         }
       }
     });
+
+    return () => {
+      isCancelled = true;
+    };
   }, [isOpen, user, showEmailAuth]);
 
   // Handle Google Token Response
@@ -522,11 +574,39 @@ export default function RazorpayCheckoutModal({
                 Sign in to activate your ₹49 member discount:
               </strong>
 
-              {/* Google One-Tap / Standard Button Container */}
+              {/* Google One-Tap / Standard Button Container with Circle Loader */}
               <div
-                id="google-signin-btn-container"
-                style={{ display: "flex", justifyContent: "center", minHeight: "42px", margin: "10px 0" }}
-              />
+                style={{
+                  position: "relative",
+                  minHeight: "44px",
+                  margin: "12px 0 10px",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                {!googleBtnLoaded && (
+                  <div className="google-btn-loading-placeholder" role="status" aria-label="Loading Google Sign-In">
+                    <div className="google-spinner-circle" />
+                    <span>Loading Google Sign-In...</span>
+                  </div>
+                )}
+
+                <div
+                  id="google-signin-btn-container"
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    minHeight: "42px",
+                    width: "100%",
+                    visibility: googleBtnLoaded ? "visible" : "hidden",
+                    position: googleBtnLoaded ? "static" : "absolute",
+                    opacity: googleBtnLoaded ? 1 : 0,
+                    transition: "opacity 0.25s ease",
+                  }}
+                />
+              </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: "10px", margin: "10px 0" }}>
                 <span style={{ flex: 1, height: "1px", background: "#f0d5db" }} />

@@ -201,6 +201,18 @@ export default function BirthdayCreateWizard() {
     }
   }, [formData, step, maxStepReached, hasSeenPreview, createdSlug, isHydrated]);
 
+  // Pre-warm Google Identity Services SDK in background so checkout modal has Google Sign-In ready
+  useEffect(() => {
+    if (typeof window !== "undefined" && !document.getElementById("google-gsi-client")) {
+      const script = document.createElement("script");
+      script.id = "google-gsi-client";
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      document.body.appendChild(script);
+    }
+  }, []);
+
   // Check if user has entered any custom data so far
   const hasDraftData = Boolean(
     formData.name.trim() ||
@@ -588,36 +600,37 @@ export default function BirthdayCreateWizard() {
         </div>
       </header>
 
-      {/* Progress Stepper */}
-      <div className="wizard-stepper">
-        <div className="stepper-track">
-          {[
-            { num: 1, label: "Details" },
-            { num: 2, label: "Message" },
-            { num: 3, label: "5 Reasons" },
-            { num: 4, label: "Portrait" },
-            { num: 5, label: "Gallery" },
-            { num: 6, label: "Preview" },
-          ].map((s) => (
-            <button
-              key={s.num}
-              type="button"
-              className={`stepper-step ${step === s.num ? "active" : ""} ${step > s.num ? "completed" : ""}`}
-              onClick={() => {
-                if (step < 6 && (s.num <= maxStepReached || s.num < step)) {
-                  changeStep(s.num);
-                }
-              }}
-              disabled={step === 6 || (s.num > maxStepReached && s.num > step)}
-            >
-              <div className="step-circle">
-                {step > s.num ? "✓" : s.num}
-              </div>
-              <span className="step-name">{s.label}</span>
-            </button>
-          ))}
+      {/* Progress Stepper (Creation Steps 1 to 5) */}
+      {step < 6 && (
+        <div className="wizard-stepper">
+          <div className="stepper-track">
+            {[
+              { num: 1, label: "Details" },
+              { num: 2, label: "Message" },
+              { num: 3, label: "5 Reasons" },
+              { num: 4, label: "Portrait" },
+              { num: 5, label: "Gallery" },
+            ].map((s) => (
+              <button
+                key={s.num}
+                type="button"
+                className={`stepper-step ${step === s.num ? "active" : ""} ${step > s.num ? "completed" : ""}`}
+                onClick={() => {
+                  if (s.num <= maxStepReached || s.num < step) {
+                    changeStep(s.num);
+                  }
+                }}
+                disabled={s.num > maxStepReached && s.num > step}
+              >
+                <div className="step-circle">
+                  {step > s.num ? "✓" : s.num}
+                </div>
+                <span className="step-name">{s.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Wizard Card Body */}
       <div className="wizard-card">
@@ -1139,49 +1152,65 @@ export default function BirthdayCreateWizard() {
 
         {/* Footer Navigation Buttons (Steps 1 to 5) */}
         {step < 6 && (
-          <div className="wizard-footer-nav">
-            {step > 1 ? (
-              <button
-                type="button"
-                className="btn-wizard-prev"
-                onClick={() => setStep(step - 1)}
-                disabled={loading}
-              >
-                ← Previous
-              </button>
-            ) : <div />}
-
+          <div className={`wizard-footer-nav ${step === 5 ? "wizard-footer-nav-step5" : ""}`}>
             {step < 5 ? (
-              <button
-                type="button"
-                className="btn-wizard-next"
-                onClick={() => changeStep(step + 1)}
-                disabled={!canGoNext() || loading}
-              >
-                Next Step →
-              </button>
-            ) : (
-              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+              <>
+                {step > 1 ? (
+                  <button
+                    type="button"
+                    className="btn-wizard-prev"
+                    onClick={() => setStep(step - 1)}
+                    disabled={loading}
+                  >
+                    ← Previous
+                  </button>
+                ) : (
+                  <div className="btn-wizard-spacer" />
+                )}
+
                 <button
                   type="button"
                   className="btn-wizard-next"
-                  style={{ background: "#fff", color: "#d95775", border: "1.5px solid #d95775", boxShadow: "none" }}
-                  onClick={handleStartLocalPreview}
+                  onClick={() => changeStep(step + 1)}
                   disabled={!canGoNext() || loading}
                 >
-                  {hasSeenPreview ? "Preview Again 👀" : "Preview Experience 👀"}
+                  Next Step →
                 </button>
+              </>
+            ) : (
+              <div className="wizard-step5-actions">
+                <div className="wizard-step5-row">
+                  <button
+                    type="button"
+                    className="btn-wizard-prev btn-step5-prev"
+                    onClick={() => setStep(step - 1)}
+                    disabled={loading}
+                  >
+                    ← Previous
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn-step5-preview"
+                    onClick={handleStartLocalPreview}
+                    disabled={!canGoNext() || loading}
+                    title="Preview celebration experience"
+                  >
+                    <span>👀</span>
+                    <span>{hasSeenPreview ? "Preview Again" : "Preview Experience"}</span>
+                  </button>
+                </div>
+
                 <button
                   type="button"
-                  className="btn-wizard-next"
+                  className="btn-step5-buy"
                   onClick={handleOpenCheckout}
                   disabled={!canGoNext() || loading}
-                  style={{
-                    background: "linear-gradient(135deg, #d95775 0%, #be3159 100%)",
-                    boxShadow: "0 8px 24px rgba(217, 87, 117, 0.35)",
-                  }}
+                  title="Unlock and purchase your celebration link"
                 >
-                  ⚡ Unlock &amp; Buy (₹49 / ₹199) →
+                  <span className="btn-step5-bolt">⚡</span>
+                  <span className="btn-step5-buy-text">Unlock &amp; Buy (₹49 / ₹199)</span>
+                  <span className="btn-step5-arrow">→</span>
                 </button>
               </div>
             )}
