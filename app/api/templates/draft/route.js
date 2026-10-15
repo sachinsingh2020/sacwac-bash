@@ -4,18 +4,28 @@ import AbandonedTemplate from '../../../../models/AbandonedTemplate';
 import { extractClientIp } from '../../../../lib/geoAndAgent';
 import { verifyToken } from '../../../../lib/jwt';
 import { verifyAdminAuth } from '../../../../lib/adminAuth';
+import { deleteRecordCloudinaryAssets } from '../../../../lib/cloudinary';
 
 export const dynamic = 'force-dynamic';
 
-// GET: Admin fetches "people who create but didn't buy"
+// GET: Admin fetches abandoned draft templates
 export async function GET(request) {
   try {
     if (!verifyAdminAuth(request)) {
       return NextResponse.json({ error: 'Unauthorized: Admin access required.' }, { status: 401 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const filter = searchParams.get('filter'); // 'all' | 'loggedin'
+
     await connectToDatabase();
-    const templates = await AbandonedTemplate.find({ isConverted: false })
+
+    const query = { isConverted: false };
+    if (filter === 'loggedin') {
+      query.userEmail = { $exists: true, $ne: '' };
+    }
+
+    const templates = await AbandonedTemplate.find(query)
       .sort({ createdAt: -1 })
       .limit(200)
       .lean();
@@ -27,7 +37,7 @@ export async function GET(request) {
   }
 }
 
-// POST: Save draft template when user reaches preview without buying
+// POST: Save draft template when user designs celebration or tests preview
 export async function POST(request) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -40,11 +50,13 @@ export async function POST(request) {
     const clientIp = extractClientIp(request);
     const userAgent = request.headers.get('user-agent') || '';
 
-    let userEmail = '';
-    const token = request.cookies.get('user_token')?.value;
-    if (token) {
-      const decoded = verifyToken(token);
-      if (decoded && decoded.email) userEmail = decoded.email;
+    let userEmail = body.userEmail || '';
+    if (!userEmail) {
+      const token = request.cookies.get('user_token')?.value;
+      if (token) {
+        const decoded = verifyToken(token);
+        if (decoded && decoded.email) userEmail = decoded.email;
+      }
     }
 
     await connectToDatabase();
@@ -74,6 +86,28 @@ export async function POST(request) {
       },
       { upsert: true, new: true }
     );
+
+    // Auto-trim: Enforce maximum of 200 non-converted draft records in the database.
+    // If records exceed 200, delete oldest records from below along with their Cloudinary assets.
+    try {
+      const totalCount = await AbandonedTemplate.countDocuments({ isConverted: false });
+      if (totalCount > 200) {
+        const excessCount = totalCount - 200;
+        const excessOldest = await AbandonedTemplate.find({ isConverted: false })
+          .sort({ createdAt: 1 }) // oldest records first (from bottom)
+          .limit(excessCount)
+          .lean();
+
+        for (const draft of excessOldest) {
+          await deleteRecordCloudinaryAssets(draft);
+        }
+
+        const idsToDelete = excessOldest.map((d) => d._id);
+        await AbandonedTemplate.deleteMany({ _id: { $in: idsToDelete } });
+      }
+    } catch (trimErr) {
+      console.warn('Auto-trimming abandoned templates encountered error:', trimErr.message);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

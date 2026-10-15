@@ -37,6 +37,15 @@ export default function VisitorAnalyticsView({ adminToken }) {
   const [usersList, setUsersList] = useState([]);
   const [userSearchQuery, setUserSearchQuery] = useState("");
 
+  // Search queries for abandoned tabs
+  const [abandonedSearchQuery, setAbandonedSearchQuery] = useState("");
+  const [loggedInAbandonedSearchQuery, setLoggedInAbandonedSearchQuery] = useState("");
+
+  // Permanent deletion warning modal state
+  const [deleteModalItem, setDeleteModalItem] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
   // 1-month reminder check state
   const [runningReminderCheck, setRunningReminderCheck] = useState(false);
   const [reminderResult, setReminderResult] = useState(null);
@@ -112,6 +121,23 @@ export default function VisitorAnalyticsView({ adminToken }) {
     }
   };
 
+  // Lock body scroll and allow ESC key to exit fullscreen preview
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && previewingTemplate) {
+        setPreviewingTemplate(null);
+      }
+    };
+    if (previewingTemplate) {
+      window.addEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "hidden";
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [previewingTemplate]);
+
   // Filter paid buyers by search
   const filteredBuyers = useMemo(() => {
     const list = data.paidBuyers || [];
@@ -168,6 +194,94 @@ export default function VisitorAnalyticsView({ adminToken }) {
       (u.name && u.name.toLowerCase().includes(q))
     );
   }, [usersList, userSearchQuery]);
+
+  // Filter abandoned templates by search
+  const filteredAbandoned = useMemo(() => {
+    if (!abandonedSearchQuery.trim()) return abandonedTemplates;
+    const q = abandonedSearchQuery.toLowerCase();
+    return abandonedTemplates.filter((t) =>
+      (t.name && t.name.toLowerCase().includes(q)) ||
+      (t.nickname && t.nickname.toLowerCase().includes(q)) ||
+      (t.userEmail && t.userEmail.toLowerCase().includes(q)) ||
+      (t.clientIp && t.clientIp.toLowerCase().includes(q))
+    );
+  }, [abandonedTemplates, abandonedSearchQuery]);
+
+  // Filter logged-in abandoned templates
+  const loggedInAbandoned = useMemo(() => {
+    const list = abandonedTemplates.filter((t) => t.userEmail && t.userEmail.trim());
+    if (!loggedInAbandonedSearchQuery.trim()) return list;
+    const q = loggedInAbandonedSearchQuery.toLowerCase();
+    return list.filter((t) =>
+      (t.name && t.name.toLowerCase().includes(q)) ||
+      (t.nickname && t.nickname.toLowerCase().includes(q)) ||
+      (t.userEmail && t.userEmail.toLowerCase().includes(q)) ||
+      (t.clientIp && t.clientIp.toLowerCase().includes(q))
+    );
+  }, [abandonedTemplates, loggedInAbandonedSearchQuery]);
+
+  const promptDelete = (type, id, title, subtitle, slug = null, hasCloudinary = false) => {
+    setDeleteError("");
+    setDeleteModalItem({ type, id, title, subtitle, slug, hasCloudinary });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteModalItem) return;
+    setIsDeleting(true);
+    setDeleteError("");
+    try {
+      const headers = { "Content-Type": "application/json" };
+      if (adminToken) headers["x-admin-token"] = adminToken;
+
+      const res = await fetch("/api/admin/records", {
+        method: "DELETE",
+        headers,
+        body: JSON.stringify({
+          type: deleteModalItem.type,
+          id: deleteModalItem.id,
+          slug: deleteModalItem.slug,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "Failed to delete record.");
+      }
+
+      // Optimistically update frontend state
+      if (deleteModalItem.type === "buyer") {
+        setData((prev) => ({
+          ...prev,
+          paidBuyers: (prev.paidBuyers || []).filter(
+            (b) => b._id !== deleteModalItem.id && b.slug !== deleteModalItem.slug
+          ),
+          paidBuyersCount: Math.max(0, (prev.paidBuyersCount || 0) - 1),
+        }));
+      } else if (deleteModalItem.type === "abandoned") {
+        setAbandonedTemplates((prev) =>
+          prev.filter((t) => t._id !== deleteModalItem.id && t.templateId !== deleteModalItem.id)
+        );
+      } else if (deleteModalItem.type === "user") {
+        setUsersList((prev) =>
+          prev.filter((u) => u._id !== deleteModalItem.id && u.email !== deleteModalItem.title)
+        );
+      } else if (deleteModalItem.type === "visitor") {
+        setData((prev) => ({
+          ...prev,
+          records: (prev.records || []).filter((r) => r._id !== deleteModalItem.id),
+        }));
+        if (selectedRecord && selectedRecord._id === deleteModalItem.id) {
+          setSelectedRecord(null);
+        }
+      }
+
+      setDeleteModalItem(null);
+    } catch (err) {
+      setDeleteError(err.message || "Failed to delete record.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handleCopyLink = (slug) => {
     if (typeof window === "undefined") return;
@@ -250,6 +364,18 @@ export default function VisitorAnalyticsView({ adminToken }) {
           <span>people who create but didn&apos;t buy</span>
           <span className="analytics-tab-pill-badge" style={{ background: "#fff0f3", color: "#d95775" }}>
             {abandonedTemplates.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          className={`analytics-view-tab-btn ${activeMainTab === "abandoned_loggedin" ? "active" : ""}`}
+          onClick={() => setActiveMainTab("abandoned_loggedin")}
+        >
+          <span>✉️</span>
+          <span>Created &amp; Logged In (Didn&apos;t Buy)</span>
+          <span className="analytics-tab-pill-badge" style={{ background: "#eff6ff", color: "#2563eb" }}>
+            {abandonedTemplates.filter((t) => t.userEmail && t.userEmail.trim()).length}
           </span>
         </button>
 
@@ -461,10 +587,25 @@ export default function VisitorAnalyticsView({ adminToken }) {
 
                         <td>
                           <div>
-                            <span style={{ fontWeight: 700, color: "#16a34a", fontSize: "13px" }}>
-                              ₹{b.amountPaid || 199}
-                            </span>
-                            <div style={{ marginTop: "3px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span style={{ fontWeight: 800, color: b.amountPaid === 49 ? "#d95775" : "#16a34a", fontSize: "14px" }}>
+                                ₹{b.amountPaid !== undefined && b.amountPaid !== null ? b.amountPaid : 199}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "10px",
+                                  fontWeight: 700,
+                                  padding: "2px 6px",
+                                  borderRadius: "6px",
+                                  background: b.amountPaid === 49 ? "#fff0f3" : "#f0fdf4",
+                                  color: b.amountPaid === 49 ? "#d95775" : "#166534",
+                                  border: b.amountPaid === 49 ? "1px solid #ffd6e1" : "1px solid #bbf7d0",
+                                }}
+                              >
+                                {b.amountPaid === 49 ? "Login (₹49)" : "Standard (₹199)"}
+                              </span>
+                            </div>
+                            <div style={{ marginTop: "4px" }}>
                               <span className="analytics-ip-code" style={{ fontSize: "11px" }}>
                                 {b.paymentId || "N/A"}
                               </span>
@@ -508,6 +649,23 @@ export default function VisitorAnalyticsView({ adminToken }) {
                             >
                               Logs
                             </button>
+                            <button
+                              type="button"
+                              className="analytics-view-btn analytics-delete-action-btn"
+                              onClick={() =>
+                                promptDelete(
+                                  "buyer",
+                                  b._id,
+                                  b.name,
+                                  `Slug: /${b.slug} • Payment ID: ${b.paymentId || "N/A"}`,
+                                  b.slug,
+                                  true
+                                )
+                              }
+                              title="Permanently delete this buyer page and its Cloudinary photos"
+                            >
+                              🗑️ Delete
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -547,14 +705,25 @@ export default function VisitorAnalyticsView({ adminToken }) {
           <div className="analytics-table-card">
             <div className="analytics-table-head-row">
               <h3 className="analytics-table-title">
-                <span>📝 Drafted Celebrations ({abandonedTemplates.length})</span>
+                <span>📝 Drafted Celebrations ({filteredAbandoned.length})</span>
+                <span className="analytics-tab-pill-badge" style={{ fontSize: "11px", marginLeft: "8px" }}>
+                  Max 200 kept
+                </span>
               </h3>
+              <input
+                type="text"
+                className="analytics-search-input"
+                placeholder="Search drafts by name, email, or IP..."
+                value={abandonedSearchQuery}
+                onChange={(e) => setAbandonedSearchQuery(e.target.value)}
+                style={{ maxWidth: "300px" }}
+              />
             </div>
 
-            {abandonedTemplates.length === 0 ? (
+            {filteredAbandoned.length === 0 ? (
               <div className="analytics-empty">
                 <div className="analytics-empty-icon">🎨</div>
-                <strong>No abandoned templates recorded yet.</strong>
+                <strong>No matching abandoned templates found.</strong>
                 <p>When someone designs a celebration in the wizard and previews it without paying, their draft will be listed here.</p>
               </div>
             ) : (
@@ -571,7 +740,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {abandonedTemplates.map((t) => (
+                    {filteredAbandoned.map((t) => (
                       <tr key={t._id || t.templateId}>
                         <td>
                           <div className="buyer-profile-cell">
@@ -621,14 +790,192 @@ export default function VisitorAnalyticsView({ adminToken }) {
                         </td>
 
                         <td>
-                          <button
-                            type="button"
-                            className="analytics-view-btn"
-                            onClick={() => setPreviewingTemplate(t)}
-                            style={{ background: "#d95775", color: "#fff", borderColor: "#d95775" }}
-                          >
-                            👀 View Template
-                          </button>
+                          <div style={{ display: "flex", gap: "6px" }}>
+                            <button
+                              type="button"
+                              className="analytics-view-btn"
+                              onClick={() => setPreviewingTemplate(t)}
+                              style={{ background: "#d95775", color: "#fff", borderColor: "#d95775" }}
+                              title="Inspect full celebration preview"
+                            >
+                              👀 View Template
+                            </button>
+                            <button
+                              type="button"
+                              className="analytics-view-btn analytics-delete-action-btn"
+                              onClick={() =>
+                                promptDelete(
+                                  "abandoned",
+                                  t._id,
+                                  t.name,
+                                  `Created: ${formatTimestamp(t.createdAt)}${t.userEmail ? " • User: " + t.userEmail : " • Guest"}`,
+                                  null,
+                                  true
+                                )
+                              }
+                              title="Permanently delete this draft template and its Cloudinary photos"
+                            >
+                              🗑️ Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ============================================================== */}
+      {/* TAB: CREATED TEMPLATE AND LOGGED IN BUT DIDN'T BUY             */}
+      {/* ============================================================== */}
+      {activeMainTab === "abandoned_loggedin" && (
+        <section className="abandoned-section" aria-label="People who created template and logged in but didn't buy">
+          <div className="buyers-header-card">
+            <div className="buyers-header-title">
+              <h3>
+                <span>✉️</span>
+                <span>Created &amp; Logged In (Didn&apos;t Buy)</span>
+              </h3>
+              <p>
+                Every visitor who signed into their account (Google or Email OTP), customized their birthday celebration with photos &amp; reasons, but abandoned checkout before completing the purchase.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="analytics-refresh-btn"
+              onClick={fetchAbandonedTemplates}
+            >
+              ↻ Refresh List
+            </button>
+          </div>
+
+          <div className="analytics-table-card">
+            <div className="analytics-table-head-row">
+              <h3 className="analytics-table-title">
+                <span>🎯 High-Intent Logged-In Leads ({loggedInAbandoned.length})</span>
+              </h3>
+              <input
+                type="text"
+                className="analytics-search-input"
+                placeholder="Search by name, email, or IP..."
+                value={loggedInAbandonedSearchQuery}
+                onChange={(e) => setLoggedInAbandonedSearchQuery(e.target.value)}
+                style={{ maxWidth: "300px" }}
+              />
+            </div>
+
+            {loggedInAbandoned.length === 0 ? (
+              <div className="analytics-empty">
+                <div className="analytics-empty-icon">✉️</div>
+                <strong>No logged-in abandoned templates found.</strong>
+                <p>When someone logs in, designs their celebration, and exits without paying, their draft and email will appear here.</p>
+              </div>
+            ) : (
+              <div className="analytics-table-wrap">
+                <table className="analytics-table">
+                  <thead>
+                    <tr>
+                      <th>Celebrant Details</th>
+                      <th>Logged-In User Email</th>
+                      <th>Created At</th>
+                      <th>IP &amp; Device</th>
+                      <th>Photos &amp; Reasons</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loggedInAbandoned.map((t) => (
+                      <tr key={t._id || t.templateId}>
+                        <td>
+                          <div className="buyer-profile-cell">
+                            {t.photo ? (
+                              <img src={t.photo} alt={t.name} className="buyer-thumb-avatar" />
+                            ) : (
+                              <div className="buyer-monogram-avatar">
+                                {t.name ? t.name[0].toUpperCase() : "🎂"}
+                              </div>
+                            )}
+                            <div>
+                              <strong>{t.name}</strong>
+                              {t.nickname && <span className="buyer-nickname">&ldquo;{t.nickname}&rdquo;</span>}
+                              <span style={{ display: "block", fontSize: "11px", color: "#8a6d77" }}>
+                                DOB: {t.date || t.dob || "N/A"} {t.age ? `(${t.age} yrs)` : ""}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span style={{ fontSize: "12.5px", color: "#2563eb", fontWeight: 700 }}>
+                              ✉️ {t.userEmail}
+                            </span>
+                            <button
+                              type="button"
+                              className="buyer-copy-btn"
+                              onClick={() => {
+                                if (navigator.clipboard?.writeText) {
+                                  navigator.clipboard.writeText(t.userEmail);
+                                }
+                              }}
+                              title="Copy Email Address"
+                            >
+                              Copy
+                            </button>
+                          </div>
+                        </td>
+
+                        <td>
+                          <span style={{ fontSize: "11.5px", color: "#6e4f59", whiteSpace: "nowrap" }}>
+                            {formatTimestamp(t.createdAt)}
+                          </span>
+                        </td>
+
+                        <td>
+                          <div>
+                            <span className="analytics-ip-code" style={{ fontSize: "11px" }}>{t.clientIp || "Unknown"}</span>
+                          </div>
+                        </td>
+
+                        <td>
+                          <div style={{ fontSize: "12px", color: "#54303b" }}>
+                            <span>📸 {(t.gallery || []).length} gallery</span> • <span>✦ {(t.reasons || []).length} reasons</span>
+                          </div>
+                        </td>
+
+                        <td>
+                          <div style={{ display: "flex", gap: "6px" }}>
+                            <button
+                              type="button"
+                              className="analytics-view-btn"
+                              onClick={() => setPreviewingTemplate(t)}
+                              style={{ background: "#d95775", color: "#fff", borderColor: "#d95775" }}
+                              title="Inspect full celebration preview"
+                            >
+                              👀 View Template
+                            </button>
+                            <button
+                              type="button"
+                              className="analytics-view-btn analytics-delete-action-btn"
+                              onClick={() =>
+                                promptDelete(
+                                  "abandoned",
+                                  t._id,
+                                  t.name,
+                                  `Logged in as: ${t.userEmail} • Created: ${formatTimestamp(t.createdAt)}`,
+                                  null,
+                                  true
+                                )
+                              }
+                              title="Permanently delete this draft template and its Cloudinary photos"
+                            >
+                              🗑️ Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -694,11 +1041,12 @@ export default function VisitorAnalyticsView({ adminToken }) {
                       <th>Login Provider</th>
                       <th>First Joined</th>
                       <th>Last Login</th>
+                      <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredUsers.map((u) => (
-                      <tr key={u.id || u.email}>
+                      <tr key={u._id || u.id || u.email}>
                         <td>
                           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                             {u.picture ? (
@@ -744,6 +1092,26 @@ export default function VisitorAnalyticsView({ adminToken }) {
                           <span style={{ fontSize: "11.5px", color: "#64748b" }}>
                             {formatTimestamp(u.lastLoginAt || u.createdAt)}
                           </span>
+                        </td>
+
+                        <td>
+                          <button
+                            type="button"
+                            className="analytics-view-btn analytics-delete-action-btn"
+                            onClick={() =>
+                              promptDelete(
+                                "user",
+                                u._id || u.id,
+                                u.email,
+                                `Name: ${u.name || "User"} • Provider: ${u.provider}`,
+                                null,
+                                false
+                              )
+                            }
+                            title="Permanently delete this registered user account"
+                          >
+                            🗑️ Delete
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -924,13 +1292,32 @@ export default function VisitorAnalyticsView({ adminToken }) {
                         </td>
 
                         <td>
-                          <button
-                            type="button"
-                            className="analytics-view-btn"
-                            onClick={() => setSelectedRecord(r)}
-                          >
-                            Details
-                          </button>
+                          <div style={{ display: "flex", gap: "6px" }}>
+                            <button
+                              type="button"
+                              className="analytics-view-btn"
+                              onClick={() => setSelectedRecord(r)}
+                            >
+                              Details
+                            </button>
+                            <button
+                              type="button"
+                              className="analytics-view-btn analytics-delete-action-btn"
+                              onClick={() =>
+                                promptDelete(
+                                  "visitor",
+                                  r._id,
+                                  r.ip,
+                                  `Target: ${r.url || r.slug || "Home"} • Time: ${formatTimestamp(r.createdAt)}`,
+                                  null,
+                                  false
+                                )
+                              }
+                              title="Delete this visitor log record"
+                            >
+                              🗑️
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -942,44 +1329,81 @@ export default function VisitorAnalyticsView({ adminToken }) {
         </section>
       )}
 
-      {/* Abandoned Template Preview Modal */}
+      {/* Abandoned Template Fullscreen Preview Portal */}
       {previewingTemplate && (
-        <div className="analytics-modal-backdrop" onClick={() => setPreviewingTemplate(null)}>
-          <div
-            className="analytics-modal"
-            style={{ width: "95vw", height: "92vh", maxWidth: "1200px" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="analytics-modal-header">
-              <div>
-                <h3>Created Template: {previewingTemplate.name}</h3>
-                <p>Status: Drafted by user (Did not buy)</p>
-              </div>
+        <div
+          className="admin-preview-fullscreen-portal"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Preview template for ${previewingTemplate.name}`}
+        >
+          {/* Floating Sleek Admin Toolbar */}
+          <header className="admin-preview-floating-bar">
+            <div className="admin-preview-bar-left">
               <button
                 type="button"
-                className="analytics-modal-close-btn"
+                className="admin-preview-back-btn"
                 onClick={() => setPreviewingTemplate(null)}
+                title="Return to Admin Dashboard (or press ESC)"
+              >
+                <span>← Exit Preview</span>
+              </button>
+            </div>
+
+            <div className="admin-preview-bar-center">
+              <span className="admin-preview-dot-pulse" />
+              <div className="admin-preview-info-text">
+                <span className="admin-preview-badge">Draft Template</span>
+                <span className="admin-preview-name">{previewingTemplate.name}</span>
+                {previewingTemplate.age && (
+                  <span className="admin-preview-meta">({previewingTemplate.age} yrs)</span>
+                )}
+                {(previewingTemplate.dob || previewingTemplate.date) && (
+                  <span className="admin-preview-meta">
+                    • DOB: {previewingTemplate.dob || previewingTemplate.date}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="admin-preview-bar-right">
+              {previewingTemplate.userEmail ? (
+                <span className="admin-preview-email-tag" title={previewingTemplate.userEmail}>
+                  ✉️ {previewingTemplate.userEmail}
+                </span>
+              ) : (
+                <span className="admin-preview-guest-tag">👤 Guest</span>
+              )}
+              <button
+                type="button"
+                className="admin-preview-close-circle"
+                onClick={() => setPreviewingTemplate(null)}
+                aria-label="Close Preview"
+                title="Close Preview (ESC)"
               >
                 ✕
               </button>
             </div>
-            <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-              <BirthdayExperience
-                isPreview={true}
-                previewData={{
-                  name: previewingTemplate.name,
-                  nickname: previewingTemplate.nickname || previewingTemplate.name,
-                  dob: previewingTemplate.dob,
-                  age: previewingTemplate.age,
-                  date: previewingTemplate.date,
-                  message: previewingTemplate.message,
-                  reasons: previewingTemplate.reasons,
-                  photo: previewingTemplate.photo,
-                  gallery: previewingTemplate.gallery,
-                }}
-                onExitPreview={() => setPreviewingTemplate(null)}
-              />
-            </div>
+          </header>
+
+          {/* Fullscreen Interactive Celebration Canvas */}
+          <div className="admin-preview-canvas-holder">
+            <BirthdayExperience
+              isPreview={true}
+              isAdminPreview={true}
+              previewData={{
+                name: previewingTemplate.name,
+                nickname: previewingTemplate.nickname || previewingTemplate.name,
+                dob: previewingTemplate.dob,
+                age: previewingTemplate.age,
+                date: previewingTemplate.date,
+                message: previewingTemplate.message,
+                reasons: previewingTemplate.reasons,
+                photo: previewingTemplate.photo,
+                gallery: previewingTemplate.gallery,
+              }}
+              onExitPreview={() => setPreviewingTemplate(null)}
+            />
           </div>
         </div>
       )}
@@ -1072,13 +1496,94 @@ export default function VisitorAnalyticsView({ adminToken }) {
               </div>
             </div>
 
-            <div className="analytics-modal-footer">
+            <div className="analytics-modal-footer" style={{ display: "flex", justifyContent: "space-between" }}>
+              <button
+                type="button"
+                className="analytics-modal-footer-btn"
+                style={{ background: "#fee2e2", color: "#b91c1c", borderColor: "#fca5a5" }}
+                onClick={() =>
+                  promptDelete(
+                    "visitor",
+                    selectedRecord._id,
+                    selectedRecord.ip,
+                    `Target: ${selectedRecord.url || selectedRecord.slug || "Home"} • Time: ${formatTimestamp(selectedRecord.createdAt)}`,
+                    null,
+                    false
+                  )
+                }
+              >
+                🗑️ Delete Record
+              </button>
               <button
                 type="button"
                 className="analytics-modal-footer-btn"
                 onClick={() => setSelectedRecord(null)}
               >
                 Close Record
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* PERMANENT DELETION WARNING MODAL                               */}
+      {/* ============================================================== */}
+      {deleteModalItem && (
+        <div
+          className="analytics-modal-backdrop"
+          onClick={() => !isDeleting && setDeleteModalItem(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="analytics-modal analytics-delete-warning-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="analytics-delete-modal-icon">⚠️</div>
+            <h3 className="analytics-delete-modal-title">Confirm Permanent Deletion</h3>
+            <p className="analytics-delete-modal-subtitle">
+              Are you sure you want to permanently delete this record? This action cannot be undone.
+            </p>
+
+            <div className="analytics-delete-modal-item-box">
+              <span className="analytics-delete-pill">{deleteModalItem.type?.toUpperCase()}</span>
+              <strong className="analytics-delete-name">{deleteModalItem.title}</strong>
+              {deleteModalItem.subtitle && (
+                <span className="analytics-delete-details">{deleteModalItem.subtitle}</span>
+              )}
+              {deleteModalItem.hasCloudinary && (
+                <div className="analytics-delete-cloud-alert">
+                  <span>☁️</span>
+                  <span>
+                    All uploaded portrait &amp; gallery photos in Cloudinary will be destroyed immediately.
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {deleteError && (
+              <div className="analytics-delete-error-box">
+                ⚠️ {deleteError}
+              </div>
+            )}
+
+            <div className="analytics-delete-actions">
+              <button
+                type="button"
+                className="analytics-delete-cancel-btn"
+                onClick={() => setDeleteModalItem(null)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="analytics-delete-confirm-btn"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Deleting..." : "🗑️ Delete Permanently"}
               </button>
             </div>
           </div>

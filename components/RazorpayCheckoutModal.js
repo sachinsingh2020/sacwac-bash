@@ -192,6 +192,17 @@ export default function RazorpayCheckoutModal({
       setOtpSent(false);
       setEmailInput("");
       setOtpInput("");
+      if (templateId && pagePayload) {
+        fetch("/api/templates/draft", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            templateId,
+            formData: pagePayload,
+            userEmail: data.user.email,
+          }),
+        }).catch(() => {});
+      }
     } catch (err) {
       setAuthError(err.message || "Invalid verification code.");
     } finally {
@@ -205,6 +216,21 @@ export default function RazorpayCheckoutModal({
       if (detected) setCurrency(detected);
     });
   }, []);
+
+  // When checkout modal is open and user is logged in, attach their email to draft
+  useEffect(() => {
+    if (isOpen && user?.email && templateId && pagePayload) {
+      fetch("/api/templates/draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          templateId,
+          formData: pagePayload,
+          userEmail: user.email,
+        }),
+      }).catch(() => {});
+    }
+  }, [isOpen, user, templateId, pagePayload]);
 
   useEffect(() => {
     if (!isOpen) {
