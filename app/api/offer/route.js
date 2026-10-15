@@ -16,7 +16,13 @@ export async function GET(request) {
 
     await connectToDatabase();
 
-    const template = await AbandonedTemplate.findOne({ templateId: id }).lean();
+    const isObjectId = id && id.length === 24 && /^[0-9a-fA-F]{24}$/.test(id);
+    const template = await AbandonedTemplate.findOne({
+      $or: [
+        { templateId: id },
+        ...(isObjectId ? [{ _id: id }] : []),
+      ],
+    }).lean();
 
     if (!template) {
       return NextResponse.json({ error: 'Celebration template not found.' }, { status: 404 });
@@ -35,8 +41,7 @@ export async function GET(request) {
       }
     }
 
-    return NextResponse.json({
-      templateId: template.templateId,
+    const formData = {
       name: template.name || 'Someone Special',
       nickname: template.nickname || '',
       dob: template.dob || '',
@@ -49,6 +54,12 @@ export async function GET(request) {
       gallery: Array.isArray(template.gallery) ? template.gallery : [],
       galleryPublicIds: Array.isArray(template.galleryPublicIds) ? template.galleryPublicIds : [],
       userEmail: template.userEmail || '',
+    };
+
+    return NextResponse.json({
+      templateId: template.templateId || String(template._id),
+      ...formData,
+      formData,
       isConverted: Boolean(template.isConverted),
       liveSlug,
       createdAt: template.createdAt,

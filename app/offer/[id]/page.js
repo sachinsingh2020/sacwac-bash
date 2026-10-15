@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import BirthdayExperience from "../../../components/BirthdayExperience";
@@ -23,10 +23,11 @@ function loadRazorpayScript() {
   });
 }
 
-export default function ExclusiveOfferPage() {
+function ExclusiveOfferContent() {
   const params = useParams();
   const searchParams = useSearchParams();
-  const templateId = params?.id;
+  const rawId = params?.id;
+  const templateId = rawId ? decodeURIComponent(rawId) : "";
 
   // Determine price from query parameter (?price=29 or ?price=39)
   const priceParam = searchParams.get("price");
@@ -80,14 +81,14 @@ export default function ExclusiveOfferPage() {
 
   // Construct preview data for BirthdayExperience
   const previewData = useMemo(() => {
-    if (!template?.formData) return null;
-    const f = template.formData;
+    if (!template) return null;
+    const f = template.formData || template;
     return {
       name: f.name?.trim() || "Sunena",
       nickname: f.nickname?.trim() || f.name?.trim() || "Sunny",
       dob: f.dob || "",
       age: f.age || "26",
-      date: f.dob || new Date().toISOString().split("T")[0],
+      date: f.dob || f.date || new Date().toISOString().split("T")[0],
       message:
         f.message?.trim() ||
         "You make ordinary days feel like tiny celebrations. Today, the whole world gets to celebrate you.",
@@ -243,8 +244,8 @@ export default function ExclusiveOfferPage() {
     });
   };
 
-  const celebrantName = template?.formData?.name?.trim() || "Someone Special";
-  const celebrantPhoto = template?.formData?.photo;
+  const celebrantName = (template?.formData?.name || template?.name || "Someone Special").trim();
+  const celebrantPhoto = template?.formData?.photo || template?.photo;
   const liveUrl = typeof window !== "undefined" && publishedSlug ? `${window.location.origin}/${publishedSlug}` : `/${publishedSlug}`;
 
   return (
@@ -533,5 +534,26 @@ export default function ExclusiveOfferPage() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function ExclusiveOfferPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="offer-page">
+          <div className="offer-card">
+            <div className="offer-loader-box">
+              <div className="offer-circle-spinner" />
+              <p style={{ margin: 0, fontWeight: 700, color: "#8c3b52", fontSize: "15px" }}>
+                Loading your celebration offer...
+              </p>
+            </div>
+          </div>
+        </main>
+      }
+    >
+      <ExclusiveOfferContent />
+    </Suspense>
   );
 }

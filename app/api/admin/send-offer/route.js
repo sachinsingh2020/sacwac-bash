@@ -7,12 +7,15 @@ import { sendEmail } from '../../../../lib/email';
 export const dynamic = 'force-dynamic';
 
 function getAppBaseUrl(request) {
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || '';
+  if (host && (host.includes('localhost') || host.includes('127.0.0.1'))) {
+    return `http://${host}`;
+  }
   if (process.env.NEXT_PUBLIC_APP_URL) {
     return process.env.NEXT_PUBLIC_APP_URL.replace(/\/+$/, '');
   }
-  const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'localhost:3000';
-  const proto = request.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
-  return `${proto}://${host}`;
+  const proto = request.headers.get('x-forwarded-proto') || 'https';
+  return `${proto}://${host || 'www.magicmoments.live'}`;
 }
 
 export async function POST(request) {
