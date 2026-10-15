@@ -350,18 +350,26 @@ export default function ExclusiveOfferPage() {
           <>
             {/* Offer Pill */}
             <div className={`offer-badge-pill ${is29 ? "price-29" : "price-39"}`}>
-              {is29 ? "🔥 FINAL DISCOUNT OFFER • ₹29 ONLY" : "✨ EXCLUSIVE CREATOR OFFER • ₹39 ONLY"}
+              {is29 ? "🔥 FINAL HEARTFELT OFFER • ONLY ₹29" : "💌 HANDCRAFTED WITH LOVE • SPECIAL ₹39 OFFER"}
             </div>
 
             <h1 className="offer-title">
-              Make {celebrantName} Feel Special
+              {is29
+                ? `Don’t Let ${celebrantName}’s Moment Slip Away`
+                : `Make ${celebrantName} Feel Truly Cherished`}
             </h1>
 
             <p className="offer-sub">
               {is29 ? (
-                <>This is our final offer for you. You can unlock and buy your created birthday wish in just <strong>₹29</strong>!</>
+                <>
+                  You poured love and beautiful memories into creating this surprise for <strong>{celebrantName}</strong>.
+                  True feelings should never be held back by price — as our <strong>final lowest offer</strong>, unlock their full celebration forever in just <strong>₹29</strong>!
+                </>
               ) : (
-                <>You visited our site and created a template. This special offer is only for you so you can make that special person feel special in just <strong>₹39</strong>!</>
+                <>
+                  You took the time to craft something deeply special for <strong>{celebrantName}</strong>.
+                  Birthdays come once a year, but knowing they are loved lasts a lifetime. This exclusive offer is just for you — bring their celebration to life in just <strong>₹39</strong>!
+                </>
               )}
             </p>
 
@@ -466,8 +474,8 @@ export default function ExclusiveOfferPage() {
                   </>
                 ) : (
                   <>
-                    <span>⚡</span>
-                    <span>Buy Now in Just ₹{price}</span>
+                    <span>{is29 ? "💖" : "✨"}</span>
+                    <span>{is29 ? `Unlock ${celebrantName}’s Celebration in ₹29` : `Make ${celebrantName} Smile for Just ₹39`}</span>
                   </>
                 )}
               </button>

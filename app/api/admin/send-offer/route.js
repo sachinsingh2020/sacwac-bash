@@ -56,17 +56,23 @@ export async function POST(request) {
     let bannerTag = '';
 
     if (offerPrice === 29) {
-      subject = `Final Offer: Get ${celebrantName}'s Birthday Wish in just ₹29! 🎂🎁`;
-      mainHeading = `Final Exclusive Offer for ${celebrantName}'s Birthday Surprise`;
-      bannerTag = `🔥 FINAL CHANCE OFFER • FLAT ₹${discountAmount} OFF`;
-      messageBody = `This is our final offer for you! You can buy the birthday wish you created for <strong>${celebrantName}</strong> in <strong>just ₹29</strong>. Click below to preview and buy your celebration.`;
-      ctaButtonText = `Buy in Just ₹29 Now →`;
+      subject = `Before this is lost forever... A heartfelt final wish for ${celebrantName} 🥺❤️`;
+      mainHeading = `Some memories are simply too precious to leave behind... 🕊️`;
+      bannerTag = `🔥 OUR FINAL & LOWEST OFFER • ONLY ₹29`;
+      messageBody = `Life gets busy, but the people who make our world brighter only get one birthday a year. 💫<br><br>
+When you designed this celebration page for <strong>${celebrantName}</strong>, you put real love, time, and cherished memories into it. Those photos and heartfelt words shouldn't just sit in a forgotten draft — they deserve to bring tears of pure joy to <strong>${celebrantName}</strong>'s eyes. 🥹✨<br><br>
+We believe true feelings should never be held back by price. So as our <strong>final, lowest-ever offer</strong>, you can permanently unlock and share their entire interactive birthday experience for <strong>just ₹29</strong> (less than a cup of coffee).<br><br>
+This is our last reminder before this draft is permanently removed. Don't let this moment slip away — make them feel like the most cherished person in the world today:`;
+      ctaButtonText = `💖 Unlock ${celebrantName}'s Birthday Wish in ₹29 →`;
     } else {
-      subject = `Special Offer: Complete ${celebrantName}'s Birthday Template for just ₹39! ✨`;
-      mainHeading = `A Special Birthday Offer Just For You ✨`;
-      bannerTag = `🎁 EXCLUSIVE OFFER • ₹${discountAmount} SAVINGS`;
-      messageBody = `You visited our site and created a celebration template for <strong>${celebrantName}</strong>, but didn't buy it so, this special offer is only for you! We want you to make that special person feel special so you can buy your created template in <strong>just ₹39</strong>. Click below to preview and buy your template in ₹39.`;
-      ctaButtonText = `Buy Your Template in ₹39 →`;
+      subject = `A special birthday surprise waiting for ${celebrantName} ✨ (₹39 gift inside)`;
+      mainHeading = `Because ${celebrantName} deserves to feel truly loved and celebrated 🌸`;
+      bannerTag = `💌 HANDCRAFTED WITH LOVE • SPECIAL ₹39 INVITATION`;
+      messageBody = `You took the time to create something deeply meaningful for <strong>${celebrantName}</strong> — every photo, heartfelt memory, and sweet reason you chose was filled with genuine care. ❤️<br><br>
+We noticed you stepped away before completing it, and we truly couldn't let such a beautiful gesture stay unfinished. Birthdays come only once a year, but the feeling of knowing someone cared enough to make something so thoughtful stays in the heart forever.<br><br>
+Because seeing <strong>${celebrantName}</strong> smile means the world, we've unlocked a private celebration offer just for you: <strong>bring their magical birthday surprise to life for only ₹39</strong> (regularly ₹199).<br><br>
+Let them blow the digital candles, watch fireworks sparkle, and read the heartfelt letter you created just for them. Click below to preview and claim your celebration:`;
+      ctaButtonText = `✨ Make ${celebrantName} Smile for Just ₹39 →`;
     }
 
     const emailHtml = `
@@ -158,8 +164,10 @@ export async function POST(request) {
                 </tr>
               </table>
 
-              <p style="margin: 0; font-size: 12.5px; text-align: center; color: #8a6773; line-height: 1.5;">
-                Click the button above to preview your custom celebration and unlock your official permanent shareable link in just ₹${offerPrice}.
+              <p style="margin: 0; font-size: 13px; text-align: center; color: #8a6773; line-height: 1.6;">
+                ${offerPrice === 29
+                  ? '✨ Every candle blown and every sweet memory shared will remind them how deeply they are loved.'
+                  : '✨ Take a moment to preview your creation — a heartfelt gift that will stay with them long after their birthday ends.'}
               </p>
             </td>
           </tr>
