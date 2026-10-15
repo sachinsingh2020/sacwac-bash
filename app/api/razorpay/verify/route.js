@@ -59,7 +59,7 @@ export async function POST(request) {
     }
 
     // 2. Query Razorpay API directly to get the verified payment amount and status
-    let paymentAmount = tier === 'login' ? 49 : 199;
+    let paymentAmount = tier === 'offer29' ? 29 : tier === 'offer39' ? 39 : tier === 'login' ? 49 : 199;
     if (key_id && key_secret) {
       try {
         const razorpay = new Razorpay({ key_id, key_secret });
@@ -103,6 +103,9 @@ export async function POST(request) {
         userEmail = decoded.email || '';
         userId = decoded.userId || null;
       }
+    }
+    if (!userEmail) {
+      userEmail = (body.userEmail || (pagePayload && pagePayload.userEmail) || '').trim();
     }
 
     const baseSlug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '') || 'birthday';

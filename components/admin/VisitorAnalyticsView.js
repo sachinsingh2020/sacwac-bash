@@ -52,6 +52,10 @@ export default function VisitorAnalyticsView({ adminToken }) {
   const [runningReminderCheck, setRunningReminderCheck] = useState(false);
   const [reminderResult, setReminderResult] = useState(null);
 
+  // Email offer sending state for high-intent abandoned leads
+  const [sendingOffer, setSendingOffer] = useState({});
+  const [sentOffers, setSentOffers] = useState({});
+
   const fetchAnalytics = useCallback(async () => {
     setLoading(true);
     try {
@@ -227,6 +231,45 @@ export default function VisitorAnalyticsView({ adminToken }) {
       (t.clientIp && t.clientIp.toLowerCase().includes(q))
     );
   }, [abandonedTemplates, loggedInAbandonedSearchQuery]);
+
+  const handleSendOffer = async (template, price) => {
+    const key = `${template.templateId || template._id}_${price}`;
+    if (!template.userEmail) {
+      alert("No email address found for this user.");
+      return;
+    }
+    setSendingOffer((prev) => ({ ...prev, [key]: true }));
+
+    try {
+      const headers = { "Content-Type": "application/json" };
+      if (adminToken) headers["x-admin-token"] = adminToken;
+
+      const res = await fetch("/api/admin/send-offer", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          templateId: template.templateId,
+          price,
+          email: template.userEmail,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || `Failed to send ₹${price} offer email.`);
+      }
+
+      setSentOffers((prev) => ({
+        ...prev,
+        [key]: `✓ ₹${price} Sent!`,
+      }));
+    } catch (err) {
+      console.error(`Error sending ₹${price} offer:`, err);
+      alert(err.message || `Failed to send ₹${price} offer email.`);
+    } finally {
+      setSendingOffer((prev) => ({ ...prev, [key]: false }));
+    }
+  };
 
   const promptDelete = (type, id, title, subtitle, slug = null, hasCloudinary = false) => {
     setDeleteError("");
@@ -604,7 +647,20 @@ export default function VisitorAnalyticsView({ adminToken }) {
                             <td>
                               <div>
                                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                  <span style={{ fontWeight: 800, color: b.amountPaid === 49 ? "#d95775" : "#16a34a", fontSize: "14px" }}>
+                                  <span
+                                    style={{
+                                      fontWeight: 800,
+                                      color:
+                                        b.amountPaid === 29
+                                          ? "#dc2626"
+                                          : b.amountPaid === 39
+                                          ? "#be185d"
+                                          : b.amountPaid === 49
+                                          ? "#d95775"
+                                          : "#16a34a",
+                                      fontSize: "14px",
+                                    }}
+                                  >
                                     ₹{b.amountPaid !== undefined && b.amountPaid !== null ? b.amountPaid : 199}
                                   </span>
                                   <span
@@ -613,12 +669,39 @@ export default function VisitorAnalyticsView({ adminToken }) {
                                       fontWeight: 700,
                                       padding: "2px 6px",
                                       borderRadius: "6px",
-                                      background: b.amountPaid === 49 ? "#fff0f3" : "#f0fdf4",
-                                      color: b.amountPaid === 49 ? "#d95775" : "#166534",
-                                      border: b.amountPaid === 49 ? "1px solid #ffd6e1" : "1px solid #bbf7d0",
+                                      background:
+                                        b.amountPaid === 29
+                                          ? "#fee2e2"
+                                          : b.amountPaid === 39
+                                          ? "#fce7f3"
+                                          : b.amountPaid === 49
+                                          ? "#fff0f3"
+                                          : "#f0fdf4",
+                                      color:
+                                        b.amountPaid === 29
+                                          ? "#b91c1c"
+                                          : b.amountPaid === 39
+                                          ? "#be185d"
+                                          : b.amountPaid === 49
+                                          ? "#d95775"
+                                          : "#166534",
+                                      border:
+                                        b.amountPaid === 29
+                                          ? "1px solid #fca5a5"
+                                          : b.amountPaid === 39
+                                          ? "1px solid #fbcfe8"
+                                          : b.amountPaid === 49
+                                          ? "1px solid #ffd6e1"
+                                          : "1px solid #bbf7d0",
                                     }}
                                   >
-                                    {b.amountPaid === 49 ? "Login (₹49)" : "Standard (₹199)"}
+                                    {b.amountPaid === 29
+                                      ? "Final Offer (₹29)"
+                                      : b.amountPaid === 39
+                                      ? "Special Offer (₹39)"
+                                      : b.amountPaid === 49
+                                      ? "Login (₹49)"
+                                      : "Standard (₹199)"}
                                   </span>
                                 </div>
                                 <div style={{ marginTop: "4px" }}>
@@ -983,7 +1066,33 @@ export default function VisitorAnalyticsView({ adminToken }) {
                         </td>
 
                         <td>
-                          <div style={{ display: "flex", gap: "6px" }}>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
+                            {/* Send ₹39 Offer button */}
+                            <button
+                              type="button"
+                              className="analytics-view-btn analytics-offer-btn-39"
+                              onClick={() => handleSendOffer(t, 39)}
+                              disabled={sendingOffer[`${t.templateId || t._id}_39`]}
+                              title="Send ₹39 Special Offer email to user"
+                            >
+                              {sendingOffer[`${t.templateId || t._id}_39`]
+                                ? "Sending..."
+                                : sentOffers[`${t.templateId || t._id}_39`] || "📧 Send ₹39 Offer"}
+                            </button>
+
+                            {/* Send ₹29 Offer button */}
+                            <button
+                              type="button"
+                              className="analytics-view-btn analytics-offer-btn-29"
+                              onClick={() => handleSendOffer(t, 29)}
+                              disabled={sendingOffer[`${t.templateId || t._id}_29`]}
+                              title="Send ₹29 Final Offer email to user"
+                            >
+                              {sendingOffer[`${t.templateId || t._id}_29`]
+                                ? "Sending..."
+                                : sentOffers[`${t.templateId || t._id}_29`] || "🔥 Send ₹29 Offer"}
+                            </button>
+
                             <button
                               type="button"
                               className="analytics-view-btn"

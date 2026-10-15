@@ -20,12 +20,20 @@ export async function POST(request) {
     const reqCurrency = (body.currency || 'INR').toUpperCase();
     const config = CURRENCY_CONFIG[reqCurrency] || CURRENCY_CONFIG.INR;
 
-    // Pricing option: "login" (₹49) or "guest" (₹199)
-    const tier = body.tier === 'login' ? 'login' : 'guest';
+    // Pricing options: "offer29" (₹29), "offer39" (₹39), "login" (₹49), or "guest" (₹199)
+    const offerPrice = Number(body.offerPrice || body.customPrice);
+    let tier = body.tier || 'guest';
     let amount = config.amount; // default 19900 paise
 
-    if (tier === 'login' && reqCurrency === 'INR') {
+    if (offerPrice === 29 || tier === 'offer29' || body.offer === '29') {
+      amount = 2900; // ₹29 in paise
+      tier = 'offer29';
+    } else if (offerPrice === 39 || tier === 'offer39' || body.offer === '39') {
+      amount = 3900; // ₹39 in paise
+      tier = 'offer39';
+    } else if ((tier === 'login' || body.offer === '49') && reqCurrency === 'INR') {
       amount = 4900; // ₹49 in paise
+      tier = 'login';
     }
 
     const razorpay = new Razorpay({
@@ -41,7 +49,13 @@ export async function POST(request) {
       receipt,
       notes: {
         product: 'Magic Moments Celebration Page',
-        offer: tier === 'login' ? 'Member Special (Logged In)' : 'Standard Unlock',
+        offer: tier === 'offer29'
+          ? 'Final Special Discount (₹29)'
+          : tier === 'offer39'
+          ? 'Special Exclusive Discount (₹39)'
+          : tier === 'login'
+          ? 'Member Special (Logged In ₹49)'
+          : 'Standard Unlock (₹199)',
         tier,
         region: config.regionName,
       },

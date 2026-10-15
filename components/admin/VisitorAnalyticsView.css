@@ -1537,3 +1537,44 @@
   max-width: 440px;
   line-height: 1.5;
 }
+
+/* ==========================================================================
+   Exclusive Offer Action Buttons (₹39 & ₹29)
+   ========================================================================== */
+
+.analytics-offer-btn-39 {
+  background: #fdf2f8 !important;
+  color: #be185d !important;
+  border: 1px solid #fbcfe8 !important;
+  font-weight: 700 !important;
+  transition: all 0.2s ease !important;
+}
+
+.analytics-offer-btn-39:hover {
+  background: #fce7f3 !important;
+  color: #9d174d !important;
+  border-color: #f472b6 !important;
+  transform: translateY(-1px);
+}
+
+.analytics-offer-btn-29 {
+  background: #fef2f2 !important;
+  color: #b91c1c !important;
+  border: 1px solid #fecaca !important;
+  font-weight: 700 !important;
+  transition: all 0.2s ease !important;
+}
+
+.analytics-offer-btn-29:hover {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+  border-color: #f87171 !important;
+  transform: translateY(-1px);
+}
+
+.analytics-offer-btn-39:disabled,
+.analytics-offer-btn-29:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none !important;
+}
