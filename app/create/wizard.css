@@ -668,6 +668,194 @@
   box-shadow: none;
 }
 
+.btn-wizard-spacer {
+  visibility: hidden;
+}
+
+/* ==========================================================================
+   Step 5 Dedicated Actions Layout & Premium Buttons
+   ========================================================================== */
+.wizard-footer-nav-step5 {
+  display: block;
+  padding-top: 22px;
+  margin-top: 26px;
+  border-top: 1px solid rgba(217, 87, 117, 0.16);
+}
+
+.wizard-step5-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.wizard-step5-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.btn-step5-prev {
+  flex: 1;
+  min-width: 0;
+  padding: 13px 16px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1.5px solid rgba(217, 87, 117, 0.28);
+  color: #7b4f5c;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  line-height: 1;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(217, 87, 117, 0.08);
+}
+
+.btn-step5-prev:hover {
+  background: #fff8f9;
+  border-color: #d95775;
+  color: #d95775;
+  transform: translateY(-1px);
+}
+
+.btn-step5-prev:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-step5-preview {
+  flex: 1.35;
+  min-width: 0;
+  padding: 13px 16px;
+  border-radius: 999px;
+  background: #fff0f3;
+  border: 1.5px solid #fecdd3;
+  color: #d95775;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  line-height: 1;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(217, 87, 117, 0.12);
+  white-space: nowrap;
+}
+
+.btn-step5-preview:hover {
+  background: #ffe4e9;
+  border-color: #d95775;
+  color: #b52c50;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(217, 87, 117, 0.2);
+}
+
+.btn-step5-preview:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-step5-buy {
+  width: 100%;
+  padding: 15px 22px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff577d 0%, #d95775 55%, #be2d53 100%);
+  color: #ffffff;
+  border: none;
+  font-size: 15.5px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  line-height: 1.2;
+  box-shadow: 0 10px 28px rgba(217, 87, 117, 0.42);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-step5-buy::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  transition: left 0.6s ease;
+}
+
+.btn-step5-buy:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgba(217, 87, 117, 0.55);
+}
+
+.btn-step5-buy:hover::after {
+  left: 100%;
+}
+
+.btn-step5-buy:active {
+  transform: translateY(0);
+}
+
+.btn-step5-buy:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-step5-bolt {
+  font-size: 17px;
+  animation: pulseBolt 1.8s infinite ease-in-out;
+}
+
+@keyframes pulseBolt {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.22);
+  }
+}
+
+.btn-step5-buy-text {
+  letter-spacing: -0.01em;
+}
+
+.btn-step5-arrow {
+  font-size: 17px;
+  transition: transform 0.2s ease;
+}
+
+.btn-step5-buy:hover .btn-step5-arrow {
+  transform: translateX(4px);
+}
+
+@media (max-width: 420px) {
+  .btn-step5-prev,
+  .btn-step5-preview {
+    font-size: 12.5px;
+    padding: 12px 10px;
+  }
+  .btn-step5-buy {
+    font-size: 14.5px;
+    padding: 14px 16px;
+  }
+}
+
 /* Final Step Success Box */
 .wizard-success-box {
   text-align: center;
