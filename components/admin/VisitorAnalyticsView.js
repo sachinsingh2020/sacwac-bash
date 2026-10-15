@@ -461,10 +461,25 @@ export default function VisitorAnalyticsView({ adminToken }) {
 
                         <td>
                           <div>
-                            <span style={{ fontWeight: 700, color: "#16a34a", fontSize: "13px" }}>
-                              ₹{b.amountPaid || 199}
-                            </span>
-                            <div style={{ marginTop: "3px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span style={{ fontWeight: 800, color: b.amountPaid === 49 ? "#d95775" : "#16a34a", fontSize: "14px" }}>
+                                ₹{b.amountPaid !== undefined && b.amountPaid !== null ? b.amountPaid : 199}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "10px",
+                                  fontWeight: 700,
+                                  padding: "2px 6px",
+                                  borderRadius: "6px",
+                                  background: b.amountPaid === 49 ? "#fff0f3" : "#f0fdf4",
+                                  color: b.amountPaid === 49 ? "#d95775" : "#166534",
+                                  border: b.amountPaid === 49 ? "1px solid #ffd6e1" : "1px solid #bbf7d0",
+                                }}
+                              >
+                                {b.amountPaid === 49 ? "Login (₹49)" : "Standard (₹199)"}
+                              </span>
+                            </div>
+                            <div style={{ marginTop: "4px" }}>
                               <span className="analytics-ip-code" style={{ fontSize: "11px" }}>
                                 {b.paymentId || "N/A"}
                               </span>

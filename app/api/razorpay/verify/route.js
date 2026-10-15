@@ -58,23 +58,27 @@ export async function POST(request) {
       console.warn('HMAC calculation error:', hmacErr);
     }
 
-    // 2. Direct Razorpay API verification fallback
+    // 2. Query Razorpay API directly to get the verified payment amount and status
     let paymentAmount = tier === 'login' ? 49 : 199;
-    if (!isSignatureValid && key_id && key_secret) {
+    if (key_id && key_secret) {
       try {
         const razorpay = new Razorpay({ key_id, key_secret });
         const payment = await razorpay.payments.fetch(razorpay_payment_id);
-        if (
-          payment &&
-          payment.order_id === razorpay_order_id &&
-          (payment.status === 'captured' || payment.status === 'authorized')
-        ) {
-          console.log('Payment verified via Razorpay API fetch fallback:', payment.id);
-          isSignatureValid = true;
-          paymentAmount = payment.amount ? payment.amount / 100 : paymentAmount;
+        if (payment) {
+          if (payment.amount) {
+            paymentAmount = Math.round(payment.amount / 100);
+          }
+          if (
+            !isSignatureValid &&
+            payment.order_id === razorpay_order_id &&
+            (payment.status === 'captured' || payment.status === 'authorized')
+          ) {
+            console.log('Payment verified via Razorpay API fetch fallback:', payment.id);
+            isSignatureValid = true;
+          }
         }
       } catch (fetchErr) {
-        console.error('Razorpay payment fetch fallback error:', fetchErr.message);
+        console.error('Razorpay payment fetch error:', fetchErr.message);
       }
     }
 

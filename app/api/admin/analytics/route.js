@@ -112,6 +112,8 @@ export async function GET(request) {
       photo: p.photo || '',
       paymentId: p.paymentId || '',
       orderId: p.orderId || '',
+      amountPaid: typeof p.amountPaid === 'number' && p.amountPaid > 0 ? p.amountPaid : 199,
+      userEmail: p.userEmail || '',
       createdAt: p.createdAt,
       totalVisits: paidTrafficMap[p.slug]?.totalVisits || 0,
       uniqueVisitors: paidTrafficMap[p.slug]?.uniqueVisitors || 0,
