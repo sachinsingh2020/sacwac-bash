@@ -96,10 +96,30 @@ export default function BirthdayCreateWizard() {
   const portraitInputRef = useRef(null);
   const galleryInputRef = useRef(null);
 
+  // Auto-sync draft template to database so images and details are preserved for genuine previews
+  const syncDraftToServer = (dataToSync) => {
+    if (!templateId) return;
+    const data = dataToSync || formData;
+    if (!data.name?.trim() && !data.photo && (!data.gallery || data.gallery.length === 0)) return;
+    try {
+      fetch("/api/templates/draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          templateId,
+          formData: data,
+        }),
+      }).catch((err) => console.warn("Draft auto-sync:", err.message));
+    } catch (e) {}
+  };
+
   // Helper to advance or switch steps while tracking highest step reached
   const changeStep = (newStep) => {
     setStep(newStep);
     setMaxStepReached((prev) => Math.max(prev, newStep));
+    if (formData.name?.trim() || formData.photo) {
+      syncDraftToServer(formData);
+    }
   };
 
   // Restore draft from localStorage on initial client load (prevents SSR hydration mismatch)
@@ -311,11 +331,13 @@ export default function BirthdayCreateWizard() {
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Upload failed");
 
-      setFormData((prev) => ({
-        ...prev,
+      const updatedPhotoData = {
+        ...formData,
         photo: result.url,
         photoPublicId: result.publicId || "",
-      }));
+      };
+      setFormData(updatedPhotoData);
+      syncDraftToServer(updatedPhotoData);
       setShowCropModal(false);
       setRawPortraitForCrop(null);
     } catch (err) {
@@ -368,11 +390,13 @@ export default function BirthdayCreateWizard() {
         }
       }
 
-      setFormData((prev) => ({
-        ...prev,
-        gallery: [...prev.gallery, ...uploadedUrls].slice(0, 7),
-        galleryPublicIds: [...prev.galleryPublicIds, ...uploadedIds].slice(0, 7),
-      }));
+      const updatedGalleryData = {
+        ...formData,
+        gallery: [...formData.gallery, ...uploadedUrls].slice(0, 7),
+        galleryPublicIds: [...formData.galleryPublicIds, ...uploadedIds].slice(0, 7),
+      };
+      setFormData(updatedGalleryData);
+      syncDraftToServer(updatedGalleryData);
     } catch (err) {
       console.error(err);
       setErrorMsg("Some images failed to upload. Please try again.");
@@ -385,11 +409,15 @@ export default function BirthdayCreateWizard() {
 
   // Remove gallery photo
   const handleRemoveGalleryPhoto = (index) => {
-    setFormData((prev) => ({
-      ...prev,
-      gallery: prev.gallery.filter((_, i) => i !== index),
-      galleryPublicIds: prev.galleryPublicIds.filter((_, i) => i !== index),
-    }));
+    setFormData((prev) => {
+      const nextData = {
+        ...prev,
+        gallery: prev.gallery.filter((_, i) => i !== index),
+        galleryPublicIds: prev.galleryPublicIds.filter((_, i) => i !== index),
+      };
+      syncDraftToServer(nextData);
+      return nextData;
+    });
   };
 
   // Navigation validation
@@ -449,6 +477,7 @@ export default function BirthdayCreateWizard() {
 
   // Open Razorpay Checkout modal
   const handleOpenCheckout = () => {
+    syncDraftToServer(formData);
     setShowCheckoutModal(true);
   };
 
