@@ -2456,6 +2456,61 @@
   color: #8c5b69;
 }
 
+/* Google Sign-In Button Loading Placeholder */
+.google-btn-loading-placeholder {
+  width: 250px;
+  max-width: 100%;
+  height: 42px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #dadce0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.08);
+  font-family: var(--font-sans, system-ui, -apple-system, Roboto, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  color: #3c4043;
+  animation: googlePillPulse 1.6s ease-in-out infinite;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+@keyframes googlePillPulse {
+  0%, 100% {
+    box-shadow: 0 1px 3px rgba(60, 64, 67, 0.08);
+    border-color: #dadce0;
+  }
+  50% {
+    box-shadow: 0 2px 10px rgba(66, 133, 244, 0.2);
+    border-color: #4285f4;
+  }
+}
+
+.google-spinner-circle {
+  width: 17px;
+  height: 17px;
+  border: 2.5px solid #e8eaed;
+  border-top-color: #4285f4;
+  border-right-color: #ea4335;
+  border-bottom-color: #fbbc05;
+  border-left-color: #34a853;
+  border-radius: 50%;
+  animation: googleCircleSpin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes googleCircleSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 480px) {
   .checkout-modal-card {
     padding: 24px 18px;

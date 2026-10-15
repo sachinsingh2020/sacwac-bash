@@ -201,6 +201,18 @@ export default function BirthdayCreateWizard() {
     }
   }, [formData, step, maxStepReached, hasSeenPreview, createdSlug, isHydrated]);
 
+  // Pre-warm Google Identity Services SDK in background so checkout modal has Google Sign-In ready
+  useEffect(() => {
+    if (typeof window !== "undefined" && !document.getElementById("google-gsi-client")) {
+      const script = document.createElement("script");
+      script.id = "google-gsi-client";
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      document.body.appendChild(script);
+    }
+  }, []);
+
   // Check if user has entered any custom data so far
   const hasDraftData = Boolean(
     formData.name.trim() ||
