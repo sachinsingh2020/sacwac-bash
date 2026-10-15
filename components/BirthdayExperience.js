@@ -42,6 +42,8 @@ export default function BirthdayExperience({
   previewData = null,
   isPreview = false,
   isAdminPreview = false,
+  isOfferPreview = false,
+  offerPrice = 29,
   onExitPreview,
   onPublish,
   isPublishing = false,
@@ -317,8 +319,8 @@ export default function BirthdayExperience({
 
   return (
     <>
-      <main className={`experience phase-${phase} ${isPreview && !isAdminPreview ? "has-preview-bar is-preview-mode" : ""}`}>
-        {isPreview && !isAdminPreview && (
+      <main className={`experience phase-${phase} ${isPreview && !isAdminPreview && !isOfferPreview ? "has-preview-bar is-preview-mode" : ""}`}>
+        {isPreview && !isAdminPreview && !isOfferPreview && (
           <aside className="preview-top-bar" role="banner" aria-label="Preview toolbar">
             <div className="preview-bar-left">
               <button
@@ -401,7 +403,7 @@ export default function BirthdayExperience({
           autoPlay
           preload="auto"
         />
-        {(!isPreview || isAdminPreview) && (
+        {(!isPreview || isAdminPreview || isOfferPreview) && (
           <button
             type="button"
             className={`sound-toggle ${sound ? "is-playing" : "is-muted"}`}
@@ -576,7 +578,61 @@ export default function BirthdayExperience({
               aria-label="Close share modal">
               ✕
             </button>
-            {isAdminPreview ? (
+            {isOfferPreview ? (
+              <>
+                <h2>Celebration for {person.name} is Ready! 🎉</h2>
+                <p>
+                  You are previewing this special celebration. Claim your exclusive discount and unlock the permanent shareable link in just <strong>₹{offerPrice}</strong>!
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "18px" }}>
+                  <button
+                    type="button"
+                    className="exp-share-whatsapp-btn"
+                    style={{
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      border: 0,
+                      padding: "14px 20px",
+                      background: "linear-gradient(135deg, #ff577d 0%, #d95775 55%, #be2d53 100%)",
+                      color: "#fff",
+                      fontWeight: 800,
+                      fontSize: "15px",
+                      borderRadius: "999px",
+                      boxShadow: "0 8px 24px rgba(217, 87, 117, 0.4)",
+                    }}
+                    onClick={() => {
+                      setShowShareModal(false);
+                      if (onPublish) onPublish();
+                    }}
+                    disabled={isPublishing}
+                  >
+                    {isPublishing ? "Connecting Razorpay... ✨" : `⚡ Buy Now for Just ₹${offerPrice}`}
+                  </button>
+                  <button
+                    type="button"
+                    className="exp-share-copy-btn"
+                    style={{
+                      background: "transparent",
+                      color: "#8a6d77",
+                      width: "100%",
+                      justifyContent: "center",
+                      padding: "10px 18px",
+                      border: "1px solid #ebd3d8",
+                      borderRadius: "999px",
+                      cursor: "pointer",
+                      fontWeight: 700,
+                      fontSize: "13px",
+                    }}
+                    onClick={() => {
+                      setShowShareModal(false);
+                      if (onExitPreview) onExitPreview();
+                    }}
+                  >
+                    ✕ Exit Preview
+                  </button>
+                </div>
+              </>
+            ) : isAdminPreview ? (
               <>
                 <h2>Draft Celebration for {person.name}</h2>
                 <p>

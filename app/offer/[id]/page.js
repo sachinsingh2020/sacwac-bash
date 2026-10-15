@@ -508,28 +508,44 @@ function ExclusiveOfferContent() {
       {/* Fullscreen Interactive Preview Portal */}
       {isPreviewOpen && previewData && (
         <div className="offer-preview-portal">
-          <div className="offer-preview-bar">
-            <button
-              type="button"
-              onClick={() => setIsPreviewOpen(false)}
-              className="btn-offer-exit-preview"
-            >
-              ✕ Exit Preview
-            </button>
-            <button
-              type="button"
-              onClick={handleBuyNow}
-              disabled={purchasing}
-              className="btn-offer-buy-mini"
-            >
-              ⚡ Buy Now for ₹{price}
-            </button>
-          </div>
+          <header className="offer-preview-header-bar">
+            <div className="offer-preview-bar-inner">
+              <button
+                type="button"
+                onClick={() => setIsPreviewOpen(false)}
+                className="btn-offer-exit-preview"
+                aria-label="Exit preview mode"
+              >
+                <span className="offer-btn-back-arrow">←</span>
+                <span className="offer-btn-back-text">Exit Preview</span>
+              </button>
+
+              <div className="offer-preview-center-badge">
+                <span className="offer-preview-live-dot" />
+                <span className="offer-preview-badge-name">{celebrantName}’s Preview</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleBuyNow}
+                disabled={purchasing}
+                className="btn-offer-buy-mini"
+                aria-label={`Buy celebration now for ₹${price}`}
+              >
+                <span>⚡</span>
+                <span>Buy for <strong>₹{price}</strong></span>
+              </button>
+            </div>
+          </header>
 
           <BirthdayExperience
             isPreview={true}
+            isOfferPreview={true}
+            offerPrice={price}
             previewData={previewData}
             onExitPreview={() => setIsPreviewOpen(false)}
+            onPublish={handleBuyNow}
+            isPublishing={purchasing}
           />
         </div>
       )}
