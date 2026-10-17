@@ -66,7 +66,7 @@ export default function WishPhase({ person, fallbackPhoto, onMessageComplete }) 
           <p className="wish-message-body">{visibleMessage}</p>
           {person?.sender?.trim() && (
             <div className="wish-card-sender-box">
-              <span className="wish-card-sender-label">Forever with love,</span>
+              <span className="wish-card-sender-label">Forever with you,</span>
               <strong className="wish-sender-highlight">{person.sender.trim()}</strong>
             </div>
           )}

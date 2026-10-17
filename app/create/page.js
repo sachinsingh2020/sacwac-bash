@@ -82,6 +82,12 @@ export default function BirthdayCreateWizard() {
   const [rawPortraitForCrop, setRawPortraitForCrop] = useState(null);
   const [showCropModal, setShowCropModal] = useState(false);
 
+  // Crafting Surprise Card Loading Modal State
+  const [showCraftingModal, setShowCraftingModal] = useState(false);
+  const [craftingStepIndex, setCraftingStepIndex] = useState(0);
+  const [craftingProgress, setCraftingProgress] = useState(0);
+  const [craftingDone, setCraftingDone] = useState(false);
+
   const [formData, setFormData] = useState({
     name: "",
     nickname: "",
@@ -507,6 +513,28 @@ export default function BirthdayCreateWizard() {
         }),
       }).catch((err) => console.warn("Draft ping error:", err.message));
     } catch (e) {}
+  };
+
+  // Step 5 Finish: Show 3-4s Crafting Surprise Loading card then reveal preview button
+  const handleFinishClick = () => {
+    setShowCraftingModal(true);
+    setCraftingStepIndex(1);
+    setCraftingProgress(16);
+    setCraftingDone(false);
+
+    syncDraftToServer(formData);
+
+    setTimeout(() => { setCraftingStepIndex(2); setCraftingProgress(33); }, 550);
+    setTimeout(() => { setCraftingStepIndex(3); setCraftingProgress(50); }, 1100);
+    setTimeout(() => { setCraftingStepIndex(4); setCraftingProgress(68); }, 1650);
+    setTimeout(() => { setCraftingStepIndex(5); setCraftingProgress(85); }, 2200);
+    setTimeout(() => { setCraftingStepIndex(6); setCraftingProgress(100); }, 2800);
+    setTimeout(() => { setCraftingDone(true); }, 3350);
+  };
+
+  const handleLaunchPreviewFromCrafting = () => {
+    setShowCraftingModal(false);
+    handleStartLocalPreview();
   };
 
   const cleanReasons = formData.reasons
@@ -1261,45 +1289,103 @@ export default function BirthdayCreateWizard() {
                 </button>
               </>
             ) : (
-              <div className="wizard-step5-actions">
-                <div className="wizard-step5-row">
-                  <button
-                    type="button"
-                    className="btn-wizard-prev btn-step5-prev"
-                    onClick={() => setStep(step - 1)}
-                    disabled={loading}
-                  >
-                    ← Previous
-                  </button>
-
-                  <button
-                    type="button"
-                    className="btn-step5-preview"
-                    onClick={handleStartLocalPreview}
-                    disabled={!canGoNext() || loading}
-                    title="Preview celebration experience"
-                  >
-                    <span>👀</span>
-                    <span>{hasSeenPreview ? "Preview Again" : "Preview Experience"}</span>
-                  </button>
-                </div>
+              <>
+                <button
+                  type="button"
+                  className="btn-wizard-prev"
+                  onClick={() => setStep(step - 1)}
+                  disabled={loading}
+                >
+                  ← Previous
+                </button>
 
                 <button
                   type="button"
-                  className="btn-step5-buy"
-                  onClick={handleOpenCheckout}
-                  disabled={!canGoNext() || loading}
-                  title="Unlock and purchase your celebration link"
+                  className="btn-wizard-finish"
+                  onClick={handleFinishClick}
+                  disabled={loading}
                 >
-                  <span className="btn-step5-bolt">⚡</span>
-                  <span className="btn-step5-buy-text">Unlock &amp; Buy (₹49 / ₹199)</span>
-                  <span className="btn-step5-arrow">→</span>
+                  Finish &amp; Craft Surprise ✨
                 </button>
-              </div>
+              </>
             )}
           </div>
         )}
       </div>
+
+      {/* Crafting Surprise Card Loading Modal (matching Image 3) */}
+      {showCraftingModal && (
+        <div className="crafting-modal-overlay">
+          <div className="crafting-card" role="dialog" aria-modal="true">
+            <div className="crafting-cake-icon">🎂</div>
+            <h3 className="crafting-title">
+              Crafting {formData.name?.trim() || "their"}&apos;s surprise...
+            </h3>
+
+            <div className="crafting-steps-list">
+              <div className={`crafting-step-item ${craftingStepIndex >= 1 ? "completed" : "pending"}`}>
+                <span className="crafting-step-icon">{craftingStepIndex >= 1 ? "✓" : "✦"}</span>
+                <span className="crafting-step-text">Baking the Vanilla Gold 🎂</span>
+              </div>
+
+              <div className={`crafting-step-item ${craftingStepIndex >= 2 ? "completed" : "pending"}`}>
+                <span className="crafting-step-icon">{craftingStepIndex >= 2 ? "✓" : "✦"}</span>
+                <span className="crafting-step-text">
+                  {formData.age?.trim()
+                    ? `Lighting candles for turning ${formData.age.trim()} 🕯️`
+                    : "Lighting candles for a new chapter 🕯️"}
+                </span>
+              </div>
+
+              <div className={`crafting-step-item ${craftingStepIndex >= 3 ? "completed" : "pending"}`}>
+                <span className="crafting-step-icon">{craftingStepIndex >= 3 ? "✓" : "✦"}</span>
+                <span className="crafting-step-text">
+                  Filling {cleanReasons.length || 3} balloons with your words 🎈
+                </span>
+              </div>
+
+              <div className={`crafting-step-item ${craftingStepIndex >= 4 ? "completed" : "pending"}`}>
+                <span className="crafting-step-icon">{craftingStepIndex >= 4 ? "✓" : "✦"}</span>
+                <span className="crafting-step-text">
+                  Hanging {formData.gallery.length || 1} {formData.gallery.length === 1 ? "memory" : "memories"} on fairy lights 📸
+                </span>
+              </div>
+
+              <div className={`crafting-step-item ${craftingStepIndex >= 5 ? "completed" : "pending"}`}>
+                <span className="crafting-step-icon">{craftingStepIndex >= 5 ? "✓" : "✦"}</span>
+                <span className="crafting-step-text">Sealing your letter inside the card 💌</span>
+              </div>
+
+              <div className={`crafting-step-item ${craftingStepIndex >= 6 ? "completed" : "pending"}`}>
+                <span className="crafting-step-icon">{craftingStepIndex >= 6 ? "✓" : "✦"}</span>
+                <span className="crafting-step-text">
+                  Signed with love — {formData.sender?.trim() || formData.nickname?.trim() || "You"} ✍️
+                </span>
+              </div>
+            </div>
+
+            {/* Bottom: Progress Bar while running, or Preview Button once complete */}
+            {!craftingDone ? (
+              <div className="crafting-progress-track">
+                <div
+                  className="crafting-progress-fill"
+                  style={{ width: `${craftingProgress}%` }}
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="crafting-preview-btn"
+                onClick={handleLaunchPreviewFromCrafting}
+                autoFocus
+              >
+                <span>Preview Surprise</span>
+                <span>✨</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

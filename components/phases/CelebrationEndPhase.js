@@ -98,7 +98,7 @@ export default function CelebrationEndPhase({ person, onReplay, onShare }) {
               className="share-link-btn celebration-share-btn"
               onClick={onShare}
             >
-              Send the link to your loved one 💌
+              Get the link to send 💌
             </button>
           )}
           {onReplay && (

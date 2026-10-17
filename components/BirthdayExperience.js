@@ -304,7 +304,7 @@ export default function BirthdayExperience({
     `Hey ${person.name || "there"}! 🎂 I made something special just for you. Open this to see your birthday surprise: ${shareUrl}`,
   )}`;
 
-  if (isLocked && (!isPreview || !previewShowCelebration)) {
+  if (!isPreview && isLocked) {
     return (
       <>
         <audio
@@ -357,18 +357,6 @@ export default function BirthdayExperience({
             </div>
 
             <div className="preview-bar-actions">
-              {countdownInfo.isLocked && (
-                <button
-                  type="button"
-                  className="preview-bar-btn-sound is-on"
-                  onClick={() => setPreviewShowCelebration(false)}
-                  title="Switch to countdown screen preview"
-                  aria-label="View countdown screen preview"
-                >
-                  <span className="preview-sound-icon">⏳</span>
-                  <span className="preview-sound-label">Countdown</span>
-                </button>
-              )}
               <button
                 type="button"
                 className={`preview-bar-btn-sound ${sound ? "is-on" : "is-off"}`}
@@ -489,7 +477,13 @@ export default function BirthdayExperience({
               setArrowReleased(false);
               setPopped([]);
             }}
-            onShare={() => setShowShareModal(true)}
+            onShare={() => {
+              if (isPreview && onPublish) {
+                onPublish();
+              } else {
+                setShowShareModal(true);
+              }
+            }}
           />
         )}
         {phase > 1 &&
