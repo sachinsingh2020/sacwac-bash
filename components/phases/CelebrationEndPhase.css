@@ -147,6 +147,24 @@
   margin: 4px 0 22px;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.celebration-sender-highlight {
+  display: inline-block;
+  color: #ffffff;
+  background: linear-gradient(135deg, #ff3366 0%, #ff8533 100%);
+  padding: 3px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+  box-shadow: 0 3px 14px rgba(255, 51, 102, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.03em;
+  margin: 0 2px;
 }
 
 .celebration-actions {

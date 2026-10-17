@@ -85,6 +85,7 @@ export default function BirthdayCreateWizard() {
   const [formData, setFormData] = useState({
     name: "",
     nickname: "",
+    sender: "",
     birthMonth: "",
     birthDay: "",
     dob: "",
@@ -149,6 +150,7 @@ export default function BirthdayCreateWizard() {
               ...prev,
               name: typeof parsed.formData.name === "string" ? parsed.formData.name : prev.name,
               nickname: typeof parsed.formData.nickname === "string" ? parsed.formData.nickname : prev.nickname,
+              sender: typeof parsed.formData.sender === "string" ? parsed.formData.sender : prev.sender,
               birthMonth: restoredMonth || prev.birthMonth,
               birthDay: restoredDay || prev.birthDay,
               dob: restoredDob || prev.dob,
@@ -234,6 +236,7 @@ export default function BirthdayCreateWizard() {
   const hasDraftData = Boolean(
     formData.name.trim() ||
       formData.nickname.trim() ||
+      formData.sender.trim() ||
       formData.birthMonth ||
       formData.birthDay ||
       formData.dob ||
@@ -260,6 +263,7 @@ export default function BirthdayCreateWizard() {
       setFormData({
         name: "",
         nickname: "",
+        sender: "",
         birthMonth: "",
         birthDay: "",
         dob: "",
@@ -517,6 +521,7 @@ export default function BirthdayCreateWizard() {
   const checkoutPayload = {
     name: finalName,
     nickname: formData.nickname.trim() || finalName,
+    sender: formData.sender.trim() || "",
     dob: formData.dob || "",
     age: formData.age.trim() || "",
     date: formData.dob || new Date().toISOString().split("T")[0],
@@ -570,6 +575,7 @@ export default function BirthdayCreateWizard() {
             previewData={{
               name: formData.name.trim() || "Sunena",
               nickname: formData.nickname.trim() || formData.name.trim() || "Sunny",
+              sender: formData.sender.trim() || "",
               dob: formData.dob,
               age: formData.age ? formData.age.trim() : "",
               date: formData.dob || new Date().toISOString().split("T")[0],
@@ -718,17 +724,39 @@ export default function BirthdayCreateWizard() {
               />
             </div>
 
-            <div className="wizard-field-group">
-              <label className="wizard-label">Nickname / Sweet Name</label>
-              <input
-                type="text"
-                className="wizard-input"
-                placeholder="e.g. Sunny, Rancho, Chotu"
-                value={formData.nickname}
-                onChange={(e) =>
-                  setFormData({ ...formData, nickname: e.target.value })
-                }
-              />
+            <div className="wizard-grid-2">
+              <div className="wizard-field-group">
+                <label className="wizard-label">Nickname / Sweet Name</label>
+                <input
+                  type="text"
+                  className="wizard-input"
+                  placeholder="e.g. Sunny, Rancho, Chotu"
+                  value={formData.nickname}
+                  onChange={(e) =>
+                    setFormData({ ...formData, nickname: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="wizard-field-group">
+                <label className="wizard-label">
+                  Your Name <span style={{ fontSize: "11px", fontWeight: 400, color: "#8a6d77" }}>(Who is wishing?)</span>
+                </label>
+                <input
+                  type="text"
+                  className="wizard-input"
+                  placeholder="e.g. Priya, Rahul, Bestie"
+                  value={formData.sender}
+                  onChange={(e) => {
+                    const nextVal = e.target.value;
+                    setFormData((prev) => {
+                      const updated = { ...prev, sender: nextVal };
+                      syncDraftToServer(updated);
+                      return updated;
+                    });
+                  }}
+                />
+              </div>
             </div>
 
             <div className="wizard-grid-2">
@@ -1187,6 +1215,7 @@ export default function BirthdayCreateWizard() {
                   setFormData({
                     name: "",
                     nickname: "",
+                    sender: "",
                     birthMonth: "",
                     birthDay: "",
                     dob: "",

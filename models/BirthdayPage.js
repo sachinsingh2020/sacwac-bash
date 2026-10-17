@@ -4,6 +4,7 @@ const birthdayPageSchema = new mongoose.Schema({
   slug: { type: String, required: true, unique: true, index: true, trim: true },
   name: { type: String, required: true, trim: true },
   nickname: { type: String, default: '' },
+  sender: { type: String, default: '', trim: true },
   dob: { type: String, default: '' },
   age: { type: String, default: '' },
   date: { type: String, required: true },

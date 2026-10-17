@@ -162,6 +162,12 @@ export default function BirthdayCountdown({
             <h1 className="bday-countdown-title">
               The final countdown is on for <span>{recipientName}</span>!
             </h1>
+            {person?.sender?.trim() && (
+              <div className="bday-countdown-sender-tag">
+                <span>Surprise planned with love by</span>{" "}
+                <strong className="countdown-sender-highlight">{person.sender.trim()}</strong> ✨
+              </div>
+            )}
             <p className="bday-countdown-subtitle">
               Only minutes remain until midnight! Get ready for something truly magical to unfold.
             </p>
@@ -212,6 +218,12 @@ export default function BirthdayCountdown({
             <h1 className="bday-countdown-title">
               A special surprise awaits <span>{recipientName}</span>
             </h1>
+            {person?.sender?.trim() && (
+              <div className="bday-countdown-sender-tag">
+                <span>Surprise planned with love by</span>{" "}
+                <strong className="countdown-sender-highlight">{person.sender.trim()}</strong> ✨
+              </div>
+            )}
             <p className="bday-countdown-subtitle">
               It’s still too early to open the surprise! The live final countdown will officially begin <strong>1 hour before</strong> their birthday at <strong>11:00 PM</strong> on{" "}
               <strong>{countdown.countdownStartsDate || "the day before"}</strong>.

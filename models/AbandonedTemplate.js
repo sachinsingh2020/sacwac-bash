@@ -11,6 +11,7 @@ const abandonedTemplateSchema = new mongoose.Schema(
     },
     name: { type: String, default: 'Someone Special', trim: true },
     nickname: { type: String, default: '', trim: true },
+    sender: { type: String, default: '', trim: true },
     dob: { type: String, default: '' },
     age: { type: String, default: '' },
     date: { type: String, default: '' },

@@ -64,6 +64,12 @@ export default function WishPhase({ person, fallbackPhoto, onMessageComplete }) 
             <em>Birthday</em>, {person.name}!
           </h1>
           <p className="wish-message-body">{visibleMessage}</p>
+          {person?.sender?.trim() && (
+            <div className="wish-card-sender-box">
+              <span className="wish-card-sender-label">Forever with love,</span>
+              <strong className="wish-sender-highlight">{person.sender.trim()}</strong>
+            </div>
+          )}
         </div>
         <div className="envelope-front" />
         <button
@@ -88,7 +94,14 @@ export default function WishPhase({ person, fallbackPhoto, onMessageComplete }) 
           }`}
           aria-hidden="true"
         >
-          with all the love in the world ♡
+          {person?.sender?.trim() ? (
+            <>
+              with all the love in the world, from{" "}
+              <strong className="wish-screen-sender-highlight">{person.sender.trim()}</strong> ♡
+            </>
+          ) : (
+            "with all the love in the world ♡"
+          )}
         </div>
       )}
     </section>
