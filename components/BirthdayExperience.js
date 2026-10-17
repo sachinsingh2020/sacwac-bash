@@ -16,6 +16,7 @@ import { getBirthdayTargetInfo } from "../lib/birthdayCountdown";
 const fallback = {
   name: "Sunena",
   nickname: "Sunny",
+  sender: "",
   age: "26",
   message:
     "You make ordinary days feel like tiny celebrations. Today, the whole world gets to celebrate you.",
@@ -50,7 +51,14 @@ export default function BirthdayExperience({
   publishError = "",
   onClearPublishError,
 }) {
-  const [person, setPerson] = useState(previewData ? { ...fallback, ...previewData } : fallback);
+  const [person, setPerson] = useState(() => {
+    if (!previewData) return fallback;
+    return {
+      ...fallback,
+      ...previewData,
+      age: typeof previewData.age !== "undefined" ? previewData.age : fallback.age,
+    };
+  });
   const [phase, setPhase] = useState(0);
   const [sound, setSound] = useState(true);
   const [popped, setPopped] = useState([]);
@@ -79,7 +87,11 @@ export default function BirthdayExperience({
 
   useEffect(() => {
     if (previewData) {
-      setPerson({ ...fallback, ...previewData });
+      setPerson({
+        ...fallback,
+        ...previewData,
+        age: typeof previewData.age !== "undefined" ? previewData.age : fallback.age,
+      });
       setUploadedGallery(
         Array.isArray(previewData.gallery) ? previewData.gallery.slice(0, 2) : [],
       );
@@ -96,7 +108,11 @@ export default function BirthdayExperience({
       .then((response) => (response.ok ? response.json() : null))
       .then((found) => {
         if (found) {
-          setPerson({ ...fallback, ...found });
+          setPerson({
+            ...fallback,
+            ...found,
+            age: typeof found.age !== "undefined" ? found.age : "",
+          });
           setUploadedGallery(
             Array.isArray(found.gallery) ? found.gallery.slice(0, 2) : [],
           );
@@ -156,35 +172,6 @@ export default function BirthdayExperience({
       ),
     [uploadedGallery],
   );
-  useEffect(() => {
-    // Early mic request as requested so permission prompt appears when opening website
-    const askMicEarly = () => {
-      if (typeof window !== "undefined") {
-        if (!window.__birthdayAudioCtx && (window.AudioContext || window.webkitAudioContext)) {
-          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-          try {
-            window.__birthdayAudioCtx = new AudioContextClass();
-          } catch (e) {}
-        }
-        if (window.__birthdayAudioCtx && window.__birthdayAudioCtx.state === "suspended") {
-          window.__birthdayAudioCtx.resume().catch(() => {});
-        }
-        if (navigator.mediaDevices?.getUserMedia && !window.__birthdayMicStream) {
-          navigator.mediaDevices
-            .getUserMedia({ audio: true })
-            .then((stream) => {
-              window.__birthdayMicStream = stream;
-            })
-            .catch(() => {});
-        }
-      }
-    };
-    askMicEarly();
-    window.addEventListener("pointerdown", askMicEarly, { once: true });
-    return () => {
-      window.removeEventListener("pointerdown", askMicEarly);
-    };
-  }, []);
 
   const prev = () => setPhase((current) => Math.max(current - 1, 0));
   const next = () => setPhase((current) => Math.min(current + 1, 7));
@@ -288,7 +275,7 @@ export default function BirthdayExperience({
     `Hey ${person.name || "there"}! 🎂 I made something special just for you. Open this to see your birthday surprise: ${shareUrl}`,
   )}`;
 
-  if (isLocked && (!isPreview || !previewShowCelebration)) {
+  if (!isPreview && isLocked) {
     return (
       <>
         <audio
@@ -341,18 +328,6 @@ export default function BirthdayExperience({
             </div>
 
             <div className="preview-bar-actions">
-              {countdownInfo.isLocked && (
-                <button
-                  type="button"
-                  className="preview-bar-btn-sound is-on"
-                  onClick={() => setPreviewShowCelebration(false)}
-                  title="Switch to countdown screen preview"
-                  aria-label="View countdown screen preview"
-                >
-                  <span className="preview-sound-icon">⏳</span>
-                  <span className="preview-sound-label">Countdown</span>
-                </button>
-              )}
               <button
                 type="button"
                 className={`preview-bar-btn-sound ${sound ? "is-on" : "is-off"}`}
@@ -473,7 +448,13 @@ export default function BirthdayExperience({
               setArrowReleased(false);
               setPopped([]);
             }}
-            onShare={() => setShowShareModal(true)}
+            onShare={() => {
+              if (isPreview && onPublish) {
+                onPublish();
+              } else {
+                setShowShareModal(true);
+              }
+            }}
           />
         )}
         {phase > 1 &&

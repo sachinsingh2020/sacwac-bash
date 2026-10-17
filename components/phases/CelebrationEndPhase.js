@@ -35,7 +35,7 @@ export default function CelebrationEndPhase({ person, onReplay, onShare }) {
     return items;
   }, []);
 
-  const senderTag = person?.nickname?.trim() || person?.sender?.trim() || "";
+  const senderName = person?.sender?.trim() || "";
 
   return (
     <section className="celebration-end-page">
@@ -82,7 +82,12 @@ export default function CelebrationEndPhase({ person, onReplay, onShare }) {
 
         {/* Subtitle / Sender Note */}
         <p className="celebration-made-with-love">
-          Made with love, just for you{senderTag ? ` — ${senderTag}` : ""} 💛
+          Made with love, just for you
+          {senderName ? (
+            <>
+              {" "}— <span className="celebration-sender-highlight">{senderName}</span>
+            </>
+          ) : ""} 💛
         </p>
 
         {/* 2 Action Buttons moved from SS1 */}
@@ -93,7 +98,7 @@ export default function CelebrationEndPhase({ person, onReplay, onShare }) {
               className="share-link-btn celebration-share-btn"
               onClick={onShare}
             >
-              Send the link to your loved one 💌
+              Get the link to send 💌
             </button>
           )}
           {onReplay && (

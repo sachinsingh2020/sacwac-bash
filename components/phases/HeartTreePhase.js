@@ -128,8 +128,16 @@ export default function HeartTreePhase({ person, onComplete }) {
             Birthday, {person.name || person.nickname}
           </h1>
           <p className="text-line-3">
-            and just like that, you&apos;re turning{" "}
-            <strong>{person.age || "another"}</strong> ✨
+            {person.age && person.age.toString().trim() ? (
+              <>
+                and just like that, you&apos;re turning{" "}
+                <strong>{person.age.toString().trim()}</strong> ✨
+              </>
+            ) : (
+              <>
+                and just like that, another beautiful chapter begins ✨
+              </>
+            )}
           </p>
         </div>
 

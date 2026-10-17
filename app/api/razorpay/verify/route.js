@@ -15,6 +15,7 @@ function cleanPayload(body = {}) {
   return {
     name: body.name?.trim() || 'Someone Special',
     nickname: body.nickname?.trim() || '',
+    sender: body.sender?.trim() || '',
     dob,
     age: body.age?.toString().trim() || '',
     date,

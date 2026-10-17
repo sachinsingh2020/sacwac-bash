@@ -71,6 +71,7 @@ export async function POST(request) {
         templateId,
         name: formData.name?.trim() || 'Someone Special',
         nickname: formData.nickname?.trim() || '',
+        sender: formData.sender?.trim() || '',
         dob: formData.dob || '',
         age: formData.age?.toString().trim() || '',
         date: formData.dob || new Date().toISOString().split('T')[0],

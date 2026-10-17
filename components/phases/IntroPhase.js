@@ -71,6 +71,12 @@ export default function IntroPhase({ person, introGallery }) {
         <div className="intro-monogram">✦</div>
         <span className="script">a little magic for</span>
         <h1>{person.name}</h1>
+        {person?.sender?.trim() && (
+          <div className="intro-sender-badge">
+            <span>Crafted with love by</span>{" "}
+            <strong className="intro-sender-highlight">{person.sender.trim()}</strong> ✨
+          </div>
+        )}
         <p>Something beautiful is blooming...</p>
         <div className="intro-divider">
           <i /> <span>♡</span> <i />

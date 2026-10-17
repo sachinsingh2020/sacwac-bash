@@ -40,18 +40,20 @@ const REASON_OPTIONS = [
   "You are unapologetically, wonderfully, beautifully yourself.",
 ];
 
-function calculateAge(dobStr) {
-  if (!dobStr) return "";
-  const birthDate = new Date(dobStr);
-  if (isNaN(birthDate.getTime())) return "";
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const m = today.getMonth() - birthDate.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  return age >= 0 ? age.toString() : "";
-}
+const MONTHS = [
+  { value: "01", label: "January" },
+  { value: "02", label: "February" },
+  { value: "03", label: "March" },
+  { value: "04", label: "April" },
+  { value: "05", label: "May" },
+  { value: "06", label: "June" },
+  { value: "07", label: "July" },
+  { value: "08", label: "August" },
+  { value: "09", label: "September" },
+  { value: "10", label: "October" },
+  { value: "11", label: "November" },
+  { value: "12", label: "December" },
+];
 
 function getWordCount(text) {
   if (!text) return 0;
@@ -80,9 +82,18 @@ export default function BirthdayCreateWizard() {
   const [rawPortraitForCrop, setRawPortraitForCrop] = useState(null);
   const [showCropModal, setShowCropModal] = useState(false);
 
+  // Crafting Surprise Card Loading Modal State
+  const [showCraftingModal, setShowCraftingModal] = useState(false);
+  const [craftingStepIndex, setCraftingStepIndex] = useState(0);
+  const [craftingProgress, setCraftingProgress] = useState(0);
+  const [craftingDone, setCraftingDone] = useState(false);
+
   const [formData, setFormData] = useState({
     name: "",
     nickname: "",
+    sender: "",
+    birthMonth: "",
+    birthDay: "",
     dob: "",
     age: "",
     message: "",
@@ -130,11 +141,25 @@ export default function BirthdayCreateWizard() {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === "object") {
           if (parsed.formData && typeof parsed.formData === "object") {
+            let restoredMonth = typeof parsed.formData.birthMonth === "string" ? parsed.formData.birthMonth : "";
+            let restoredDay = typeof parsed.formData.birthDay === "string" ? parsed.formData.birthDay : "";
+            const restoredDob = typeof parsed.formData.dob === "string" ? parsed.formData.dob : "";
+            if ((!restoredMonth || !restoredDay) && restoredDob) {
+              const parts = restoredDob.split("-");
+              if (parts.length === 3) {
+                restoredMonth = parts[1].padStart(2, "0");
+                restoredDay = parseInt(parts[2], 10).toString();
+              }
+            }
+
             setFormData((prev) => ({
               ...prev,
               name: typeof parsed.formData.name === "string" ? parsed.formData.name : prev.name,
               nickname: typeof parsed.formData.nickname === "string" ? parsed.formData.nickname : prev.nickname,
-              dob: typeof parsed.formData.dob === "string" ? parsed.formData.dob : prev.dob,
+              sender: typeof parsed.formData.sender === "string" ? parsed.formData.sender : prev.sender,
+              birthMonth: restoredMonth || prev.birthMonth,
+              birthDay: restoredDay || prev.birthDay,
+              dob: restoredDob || prev.dob,
               age: typeof parsed.formData.age === "string" ? parsed.formData.age : prev.age,
               message: typeof parsed.formData.message === "string" ? parsed.formData.message : prev.message,
               reasons:
@@ -217,6 +242,9 @@ export default function BirthdayCreateWizard() {
   const hasDraftData = Boolean(
     formData.name.trim() ||
       formData.nickname.trim() ||
+      formData.sender.trim() ||
+      formData.birthMonth ||
+      formData.birthDay ||
       formData.dob ||
       formData.age ||
       formData.message.trim() ||
@@ -241,6 +269,9 @@ export default function BirthdayCreateWizard() {
       setFormData({
         name: "",
         nickname: "",
+        sender: "",
+        birthMonth: "",
+        birthDay: "",
         dob: "",
         age: "",
         message: "",
@@ -257,15 +288,35 @@ export default function BirthdayCreateWizard() {
     }
   };
 
-  // Handle DOB change with auto-age calculation
-  const handleDobChange = (e) => {
-    const val = e.target.value;
-    const computedAge = calculateAge(val);
-    setFormData((prev) => ({
-      ...prev,
-      dob: val,
-      age: computedAge || prev.age,
-    }));
+  // Handle birthday Month & Day selection
+  const handleMonthChange = (monthVal) => {
+    setFormData((prev) => {
+      const dayVal = prev.birthDay;
+      const currentYear = new Date().getFullYear();
+      const dobVal = monthVal && dayVal ? `${currentYear}-${monthVal}-${dayVal.padStart(2, "0")}` : "";
+      const updated = {
+        ...prev,
+        birthMonth: monthVal,
+        dob: dobVal,
+      };
+      syncDraftToServer(updated);
+      return updated;
+    });
+  };
+
+  const handleDayChange = (dayVal) => {
+    setFormData((prev) => {
+      const monthVal = prev.birthMonth;
+      const currentYear = new Date().getFullYear();
+      const dobVal = monthVal && dayVal ? `${currentYear}-${monthVal}-${dayVal.padStart(2, "0")}` : "";
+      const updated = {
+        ...prev,
+        birthDay: dayVal,
+        dob: dobVal,
+      };
+      syncDraftToServer(updated);
+      return updated;
+    });
   };
 
   // Step 3: Handle typing into any of the 5 blank reason fields
@@ -464,6 +515,28 @@ export default function BirthdayCreateWizard() {
     } catch (e) {}
   };
 
+  // Step 5 Finish: Show 3-4s Crafting Surprise Loading card then reveal preview button
+  const handleFinishClick = () => {
+    setShowCraftingModal(true);
+    setCraftingStepIndex(1);
+    setCraftingProgress(16);
+    setCraftingDone(false);
+
+    syncDraftToServer(formData);
+
+    setTimeout(() => { setCraftingStepIndex(2); setCraftingProgress(33); }, 550);
+    setTimeout(() => { setCraftingStepIndex(3); setCraftingProgress(50); }, 1100);
+    setTimeout(() => { setCraftingStepIndex(4); setCraftingProgress(68); }, 1650);
+    setTimeout(() => { setCraftingStepIndex(5); setCraftingProgress(85); }, 2200);
+    setTimeout(() => { setCraftingStepIndex(6); setCraftingProgress(100); }, 2800);
+    setTimeout(() => { setCraftingDone(true); }, 3350);
+  };
+
+  const handleLaunchPreviewFromCrafting = () => {
+    setShowCraftingModal(false);
+    handleStartLocalPreview();
+  };
+
   const cleanReasons = formData.reasons
     .map((r) => r.trim())
     .filter(Boolean);
@@ -476,6 +549,7 @@ export default function BirthdayCreateWizard() {
   const checkoutPayload = {
     name: finalName,
     nickname: formData.nickname.trim() || finalName,
+    sender: formData.sender.trim() || "",
     dob: formData.dob || "",
     age: formData.age.trim() || "",
     date: formData.dob || new Date().toISOString().split("T")[0],
@@ -529,8 +603,9 @@ export default function BirthdayCreateWizard() {
             previewData={{
               name: formData.name.trim() || "Sunena",
               nickname: formData.nickname.trim() || formData.name.trim() || "Sunny",
+              sender: formData.sender.trim() || "",
               dob: formData.dob,
-              age: formData.age.trim() || "26",
+              age: formData.age ? formData.age.trim() : "",
               date: formData.dob || new Date().toISOString().split("T")[0],
               message:
                 formData.message.trim() ||
@@ -677,56 +752,89 @@ export default function BirthdayCreateWizard() {
               />
             </div>
 
-            <div className="wizard-field-group">
-              <label className="wizard-label">Nickname / Sweet Name</label>
-              <input
-                type="text"
-                className="wizard-input"
-                placeholder="e.g. Sunny, Rancho, Chotu"
-                value={formData.nickname}
-                onChange={(e) =>
-                  setFormData({ ...formData, nickname: e.target.value })
-                }
-              />
-            </div>
-
             <div className="wizard-grid-2">
               <div className="wizard-field-group">
-                <label className="wizard-label">Date of Birth</label>
+                <label className="wizard-label">Nickname / Sweet Name</label>
                 <input
-                  type="date"
+                  type="text"
                   className="wizard-input"
-                  value={formData.dob}
-                  onChange={handleDobChange}
+                  placeholder="e.g. Sunny, Rancho, Chotu"
+                  value={formData.nickname}
+                  onChange={(e) =>
+                    setFormData({ ...formData, nickname: e.target.value })
+                  }
                 />
               </div>
 
               <div className="wizard-field-group">
                 <label className="wizard-label">
-                  Age (Turning)
-                  {formData.dob && (
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: 400,
-                        color: "#d95775",
-                        marginLeft: "6px",
-                      }}
-                    >
-                      (Auto-calculated)
-                    </span>
-                  )}
+                  Your Name <span style={{ fontSize: "11px", fontWeight: 400, color: "#8a6d77" }}>(Who is wishing?)</span>
                 </label>
                 <input
                   type="text"
                   className="wizard-input"
-                  placeholder="e.g. 24"
-                  value={formData.age}
-                  onChange={(e) =>
-                    setFormData({ ...formData, age: e.target.value })
-                  }
+                  placeholder="e.g. Priya, Rahul, Bestie"
+                  value={formData.sender}
+                  onChange={(e) => {
+                    const nextVal = e.target.value;
+                    setFormData((prev) => {
+                      const updated = { ...prev, sender: nextVal };
+                      syncDraftToServer(updated);
+                      return updated;
+                    });
+                  }}
                 />
               </div>
+            </div>
+
+            <div className="wizard-field-group">
+              <label className="wizard-label">
+                Birthday (Month &amp; Day)
+              </label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <select
+                  className="wizard-input wizard-select"
+                  value={formData.birthMonth}
+                  onChange={(e) => handleMonthChange(e.target.value)}
+                >
+                  <option value="">Select Month</option>
+                  {MONTHS.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  className="wizard-input wizard-select"
+                  value={formData.birthDay}
+                  onChange={(e) => handleDayChange(e.target.value)}
+                >
+                  <option value="">Select Day</option>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                    <option key={d} value={d.toString()}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="wizard-field-group">
+              <label className="wizard-label">
+                Turning Age <span style={{ fontSize: "11px", fontWeight: 400, color: "#8a6d77" }}>(Optional)</span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="120"
+                className="wizard-input"
+                placeholder="e.g. 25 (Optional - leave blank if not sure)"
+                value={formData.age}
+                onChange={(e) =>
+                  setFormData({ ...formData, age: e.target.value })
+                }
+              />
             </div>
           </div>
         )}
@@ -1131,6 +1239,9 @@ export default function BirthdayCreateWizard() {
                   setFormData({
                     name: "",
                     nickname: "",
+                    sender: "",
+                    birthMonth: "",
+                    birthDay: "",
                     dob: "",
                     age: "",
                     message: "",
@@ -1152,7 +1263,7 @@ export default function BirthdayCreateWizard() {
 
         {/* Footer Navigation Buttons (Steps 1 to 5) */}
         {step < 6 && (
-          <div className={`wizard-footer-nav ${step === 5 ? "wizard-footer-nav-step5" : ""}`}>
+          <div className="wizard-footer-nav">
             {step < 5 ? (
               <>
                 {step > 1 ? (
@@ -1178,45 +1289,103 @@ export default function BirthdayCreateWizard() {
                 </button>
               </>
             ) : (
-              <div className="wizard-step5-actions">
-                <div className="wizard-step5-row">
-                  <button
-                    type="button"
-                    className="btn-wizard-prev btn-step5-prev"
-                    onClick={() => setStep(step - 1)}
-                    disabled={loading}
-                  >
-                    ← Previous
-                  </button>
-
-                  <button
-                    type="button"
-                    className="btn-step5-preview"
-                    onClick={handleStartLocalPreview}
-                    disabled={!canGoNext() || loading}
-                    title="Preview celebration experience"
-                  >
-                    <span>👀</span>
-                    <span>{hasSeenPreview ? "Preview Again" : "Preview Experience"}</span>
-                  </button>
-                </div>
+              <>
+                <button
+                  type="button"
+                  className="btn-wizard-prev"
+                  onClick={() => setStep(step - 1)}
+                  disabled={loading}
+                >
+                  ← Previous
+                </button>
 
                 <button
                   type="button"
-                  className="btn-step5-buy"
-                  onClick={handleOpenCheckout}
-                  disabled={!canGoNext() || loading}
-                  title="Unlock and purchase your celebration link"
+                  className="btn-wizard-finish"
+                  onClick={handleFinishClick}
+                  disabled={loading}
                 >
-                  <span className="btn-step5-bolt">⚡</span>
-                  <span className="btn-step5-buy-text">Unlock &amp; Buy (₹49 / ₹199)</span>
-                  <span className="btn-step5-arrow">→</span>
+                  Finish &amp; Craft Surprise ✨
                 </button>
-              </div>
+              </>
             )}
           </div>
         )}
       </div>
+
+      {/* Crafting Surprise Card Loading Modal (matching Image 3) */}
+      {showCraftingModal && (
+        <div className="crafting-modal-overlay">
+          <div className="crafting-card" role="dialog" aria-modal="true">
+            <div className="crafting-cake-icon">🎂</div>
+            <h3 className="crafting-title">
+              Crafting {formData.name?.trim() || "their"}&apos;s surprise...
+            </h3>
+
+            <div className="crafting-steps-list">
+              <div className={`crafting-step-item ${craftingStepIndex >= 1 ? "completed" : "pending"}`}>
+                <span className="crafting-step-icon">{craftingStepIndex >= 1 ? "✓" : "✦"}</span>
+                <span className="crafting-step-text">Baking the Vanilla Gold 🎂</span>
+              </div>
+
+              <div className={`crafting-step-item ${craftingStepIndex >= 2 ? "completed" : "pending"}`}>
+                <span className="crafting-step-icon">{craftingStepIndex >= 2 ? "✓" : "✦"}</span>
+                <span className="crafting-step-text">
+                  {formData.age?.trim()
+                    ? `Lighting candles for turning ${formData.age.trim()} 🕯️`
+                    : "Lighting candles for a new chapter 🕯️"}
+                </span>
+              </div>
+
+              <div className={`crafting-step-item ${craftingStepIndex >= 3 ? "completed" : "pending"}`}>
+                <span className="crafting-step-icon">{craftingStepIndex >= 3 ? "✓" : "✦"}</span>
+                <span className="crafting-step-text">
+                  Filling {cleanReasons.length || 3} balloons with your words 🎈
+                </span>
+              </div>
+
+              <div className={`crafting-step-item ${craftingStepIndex >= 4 ? "completed" : "pending"}`}>
+                <span className="crafting-step-icon">{craftingStepIndex >= 4 ? "✓" : "✦"}</span>
+                <span className="crafting-step-text">
+                  Hanging {formData.gallery.length || 1} {formData.gallery.length === 1 ? "memory" : "memories"} on fairy lights 📸
+                </span>
+              </div>
+
+              <div className={`crafting-step-item ${craftingStepIndex >= 5 ? "completed" : "pending"}`}>
+                <span className="crafting-step-icon">{craftingStepIndex >= 5 ? "✓" : "✦"}</span>
+                <span className="crafting-step-text">Sealing your letter inside the card 💌</span>
+              </div>
+
+              <div className={`crafting-step-item ${craftingStepIndex >= 6 ? "completed" : "pending"}`}>
+                <span className="crafting-step-icon">{craftingStepIndex >= 6 ? "✓" : "✦"}</span>
+                <span className="crafting-step-text">
+                  Signed with love — {formData.sender?.trim() || formData.nickname?.trim() || "You"} ✍️
+                </span>
+              </div>
+            </div>
+
+            {/* Bottom: Progress Bar while running, or Preview Button once complete */}
+            {!craftingDone ? (
+              <div className="crafting-progress-track">
+                <div
+                  className="crafting-progress-fill"
+                  style={{ width: `${craftingProgress}%` }}
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="crafting-preview-btn"
+                onClick={handleLaunchPreviewFromCrafting}
+                autoFocus
+              >
+                <span>Preview Surprise</span>
+                <span>✨</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

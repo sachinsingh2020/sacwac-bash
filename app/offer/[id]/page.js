@@ -86,8 +86,9 @@ function ExclusiveOfferContent() {
     return {
       name: f.name?.trim() || "Sunena",
       nickname: f.nickname?.trim() || f.name?.trim() || "Sunny",
+      sender: f.sender?.trim() || "",
       dob: f.dob || "",
-      age: f.age || "26",
+      age: f.age ? f.age.toString().trim() : "",
       date: f.dob || f.date || new Date().toISOString().split("T")[0],
       message:
         f.message?.trim() ||
