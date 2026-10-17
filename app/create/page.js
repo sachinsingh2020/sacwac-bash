@@ -759,58 +759,54 @@ export default function BirthdayCreateWizard() {
               </div>
             </div>
 
-            <div className="wizard-grid-2">
-              <div className="wizard-field-group">
-                <label className="wizard-label">
-                  Birthday (Month &amp; Day)
-                </label>
-                <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "8px" }}>
-                  <select
-                    className="wizard-input"
-                    value={formData.birthMonth}
-                    onChange={(e) => handleMonthChange(e.target.value)}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <option value="">Select Month</option>
-                    {MONTHS.map((m) => (
-                      <option key={m.value} value={m.value}>
-                        {m.label}
-                      </option>
-                    ))}
-                  </select>
+            <div className="wizard-field-group">
+              <label className="wizard-label">
+                Birthday (Month &amp; Day)
+              </label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <select
+                  className="wizard-input wizard-select"
+                  value={formData.birthMonth}
+                  onChange={(e) => handleMonthChange(e.target.value)}
+                >
+                  <option value="">Select Month</option>
+                  {MONTHS.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
 
-                  <select
-                    className="wizard-input"
-                    value={formData.birthDay}
-                    onChange={(e) => handleDayChange(e.target.value)}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <option value="">Select Day</option>
-                    {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                      <option key={d} value={d.toString()}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <select
+                  className="wizard-input wizard-select"
+                  value={formData.birthDay}
+                  onChange={(e) => handleDayChange(e.target.value)}
+                >
+                  <option value="">Select Day</option>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                    <option key={d} value={d.toString()}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
               </div>
+            </div>
 
-              <div className="wizard-field-group">
-                <label className="wizard-label">
-                  Turning Age <span style={{ fontSize: "11px", fontWeight: 400, color: "#8a6d77" }}>(Optional)</span>
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="120"
-                  className="wizard-input"
-                  placeholder="e.g. 25 (Optional)"
-                  value={formData.age}
-                  onChange={(e) =>
-                    setFormData({ ...formData, age: e.target.value })
-                  }
-                />
-              </div>
+            <div className="wizard-field-group">
+              <label className="wizard-label">
+                Turning Age <span style={{ fontSize: "11px", fontWeight: 400, color: "#8a6d77" }}>(Optional)</span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="120"
+                className="wizard-input"
+                placeholder="e.g. 25 (Optional - leave blank if not sure)"
+                value={formData.age}
+                onChange={(e) =>
+                  setFormData({ ...formData, age: e.target.value })
+                }
+              />
             </div>
           </div>
         )}
