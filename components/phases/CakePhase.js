@@ -1,227 +1,30 @@
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import "./CakePhase.css";
 
 export default function CakePhase({ person, onComplete }) {
   const [scene, setScene] = useState(0);
-  const [micEnabled, setMicEnabled] = useState(false);
   const [blownOut, setBlownOut] = useState(false);
   const [isBuilt, setIsBuilt] = useState(false);
 
-  const audioContextRef = useRef(null);
-  const analyserRef = useRef(null);
-  const microphoneRef = useRef(null);
-  const reqRef = useRef(null);
-  const isBuiltRef = useRef(false);
-  const readyTimeRef = useRef(0);
-
   useEffect(() => {
     if (scene === 0) {
-      isBuiltRef.current = false;
-      readyTimeRef.current = 0;
       const t = setTimeout(() => setScene(2), 3500);
       return () => clearTimeout(t);
     } else if (scene === 2) {
-      isBuiltRef.current = false;
-      readyTimeRef.current = 0;
       const tBuild = setTimeout(() => {
         setIsBuilt(true);
-        isBuiltRef.current = true;
-        readyTimeRef.current = Date.now();
       }, 3500);
-      let streamGrabbed = null;
-      const attachAudio = (stream) => {
-        streamGrabbed = stream;
-        setMicEnabled(true);
-        const AudioContextClass =
-          window.AudioContext || window.webkitAudioContext;
-        if (!AudioContextClass) return;
-
-        let ctx = window.__birthdayAudioCtx;
-        if (!ctx || ctx.state === "closed") {
-          ctx = new AudioContextClass();
-          window.__birthdayAudioCtx = ctx;
-        }
-        audioContextRef.current = ctx;
-
-        // Auto-resume AudioContext on iOS/Android if started in suspended state
-        if (ctx.state === "suspended") {
-          ctx.resume().catch(() => {});
-        }
-        const resumeAudio = () => {
-          if (audioContextRef.current && audioContextRef.current.state === "suspended") {
-            audioContextRef.current.resume().catch(() => {});
-          }
-        };
-        window.addEventListener("touchstart", resumeAudio, { passive: true });
-        window.addEventListener("pointerdown", resumeAudio, { passive: true });
-        window.addEventListener("click", resumeAudio, { passive: true });
-
-        analyserRef.current = ctx.createAnalyser();
-        analyserRef.current.fftSize = 256;
-        analyserRef.current.smoothingTimeConstant = 0.2; // Responsive to breath puffs
-
-        try {
-          microphoneRef.current = ctx.createMediaStreamSource(stream);
-          microphoneRef.current.connect(analyserRef.current);
-        } catch (e) {
-          console.warn("Could not connect mic source:", e);
-        }
-
-        const freqBins = analyserRef.current.frequencyBinCount;
-        const freqData = new Uint8Array(freqBins);
-        const timeData = new Uint8Array(freqBins);
-
-        let blowFrames = 0;
-        let baselineVol = 0;
-        let baselineDev = 0;
-        let baselineLow = 0;
-        let baselineSamples = 0;
-
-        const checkAudio = () => {
-          if (blownOut) return;
-
-          // Never listen or blow out until the cake is fully assembled AND ready
-          if (!isBuiltRef.current || !readyTimeRef.current) {
-            reqRef.current = requestAnimationFrame(checkAudio);
-            return;
-          }
-
-          // Keep audio context running
-          if (ctx.state === "suspended") {
-            ctx.resume().catch(() => {});
-          }
-
-          analyserRef.current.getByteFrequencyData(freqData);
-          analyserRef.current.getByteTimeDomainData(timeData);
-
-          // 1. Overall volume
-          let fSum = 0;
-          for (let i = 0; i < freqBins; i++) fSum += freqData[i];
-          const curVol = fSum / freqBins;
-
-          // 2. Low-Frequency Energy (Wind & breath turbulence: bins 1 to 14, ~100Hz - 2400Hz)
-          const lowBins = Math.min(14, freqBins);
-          let lowSum = 0;
-          for (let i = 1; i < lowBins; i++) lowSum += freqData[i];
-          const curLow = lowSum / (lowBins - 1);
-
-          // 3. Time-domain amplitude displacement (direct air impact on mic diaphragm)
-          let devSum = 0;
-          let maxDev = 0;
-          for (let i = 0; i < timeData.length; i++) {
-            const dev = Math.abs(timeData[i] - 128);
-            devSum += dev;
-            if (dev > maxDev) maxDev = dev;
-          }
-          const curDev = devSum / timeData.length;
-
-          const elapsedSinceBuilt = Date.now() - readyTimeRef.current;
-
-          // During the initial 1200ms grace period while the candle is lighting up,
-          // sample and calibrate the ambient background level (room noise + background music)
-          if (elapsedSinceBuilt < 1200) {
-            baselineVol = (baselineVol * baselineSamples + curVol) / (baselineSamples + 1);
-            baselineDev = (baselineDev * baselineSamples + curDev) / (baselineSamples + 1);
-            baselineLow = (baselineLow * baselineSamples + curLow) / (baselineSamples + 1);
-            baselineSamples++;
-            reqRef.current = requestAnimationFrame(checkAudio);
-            return;
-          }
-
-          // Slowly adapt baseline to background music if quiet
-          if (curVol < (baselineVol || 15) * 1.35) {
-            baselineVol = (baselineVol || curVol) * 0.98 + curVol * 0.02;
-            baselineDev = (baselineDev || curDev) * 0.98 + curDev * 0.02;
-            baselineLow = (baselineLow || curLow) * 0.98 + curLow * 0.02;
-          }
-
-          const bVol = baselineVol || 12;
-          const bDev = baselineDev || 2.5;
-          const bLow = baselineLow || 10;
-
-          // Detection signatures for blowing into the mic:
-          // 1. Air puff causing diaphragm deviation above ambient music
-          const isAirPuff = curDev >= Math.max(5.2, bDev + 2.4);
-
-          // 2. Low-frequency breath turbulence surge
-          const isWindSurge = curLow >= Math.max(24.0, bLow + 9.0);
-
-          // 3. Overall breath volume surge above music
-          const isVolumeSurge = curVol >= Math.max(26.0, bVol + 9.0) && (curLow >= 18 || curDev >= 4.0);
-
-          // 4. Firm blow or hard breath
-          const isFirmBlow = curLow >= 32 || curDev >= 7.5 || maxDev >= 28;
-
-          const isBlowingNow =
-            (isAirPuff && isWindSurge) ||
-            isVolumeSurge ||
-            isFirmBlow;
-
-          if (isBlowingNow) {
-            blowFrames += 1;
-            // Require 3 consecutive frames (~50ms) to ignore momentary music clicks/transients
-            if (blowFrames >= 3) {
-              handleBlowOut();
-              return;
-            }
-          } else {
-            blowFrames = Math.max(0, blowFrames - 1);
-          }
-
-          reqRef.current = requestAnimationFrame(checkAudio);
-        };
-        checkAudio();
-      };
-
-      const isLiveStream = (stream) => {
-        return (
-          stream &&
-          stream.getAudioTracks &&
-          stream.getAudioTracks().some((t) => t.readyState === "live")
-        );
-      };
-
-      if (typeof window !== "undefined" && isLiveStream(window.__birthdayMicStream)) {
-        attachAudio(window.__birthdayMicStream);
-      } else if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices
-          .getUserMedia({ audio: true })
-          .then((stream) => {
-            window.__birthdayMicStream = stream;
-            attachAudio(stream);
-          })
-          .catch((err) => {
-            console.log("Mic access denied or error:", err);
-            setMicEnabled(false);
-          });
-      }
-      return () => {
-        clearTimeout(tBuild);
-        if (reqRef.current) cancelAnimationFrame(reqRef.current);
-        if (
-          audioContextRef.current &&
-          audioContextRef.current.state !== "closed"
-        ) {
-          audioContextRef.current.close().catch(console.error);
-        }
-      };
+      return () => clearTimeout(tBuild);
     }
-  }, [scene, blownOut]);
+  }, [scene]);
 
   const handleBlowOut = () => {
     if (blownOut) return;
     setBlownOut(true);
-    if (reqRef.current) cancelAnimationFrame(reqRef.current);
     if (typeof navigator !== "undefined" && navigator.vibrate) {
       try {
         navigator.vibrate([70, 50, 90, 60, 120]);
       } catch (e) {}
-    }
-    if (typeof window !== "undefined" && window.__birthdayMicStream) {
-      try {
-        window.__birthdayMicStream.getTracks().forEach((track) => track.stop());
-      } catch (e) {}
-      window.__birthdayMicStream = null;
     }
     // Signal completion after candle blowout celebration fireworks have bloomed (~2.8s)
     setTimeout(() => {
@@ -474,7 +277,7 @@ export default function CakePhase({ person, onComplete }) {
 
           {isBuilt && !blownOut && (
             <div className="candle-instruction">
-              <span className="text">blow or tap candle</span>
+              <span className="text">tap candle to blow out ✨</span>
               <svg
                 className="arrow-drawn"
                 viewBox="0 0 50 50"

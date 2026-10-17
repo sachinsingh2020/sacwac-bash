@@ -1263,7 +1263,7 @@ export default function BirthdayCreateWizard() {
 
         {/* Footer Navigation Buttons (Steps 1 to 5) */}
         {step < 6 && (
-          <div className={`wizard-footer-nav ${step === 5 ? "wizard-footer-nav-step5" : ""}`}>
+          <div className="wizard-footer-nav">
             {step < 5 ? (
               <>
                 {step > 1 ? (

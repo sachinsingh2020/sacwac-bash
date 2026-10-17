@@ -172,35 +172,6 @@ export default function BirthdayExperience({
       ),
     [uploadedGallery],
   );
-  useEffect(() => {
-    // Early mic request as requested so permission prompt appears when opening website
-    const askMicEarly = () => {
-      if (typeof window !== "undefined") {
-        if (!window.__birthdayAudioCtx && (window.AudioContext || window.webkitAudioContext)) {
-          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-          try {
-            window.__birthdayAudioCtx = new AudioContextClass();
-          } catch (e) {}
-        }
-        if (window.__birthdayAudioCtx && window.__birthdayAudioCtx.state === "suspended") {
-          window.__birthdayAudioCtx.resume().catch(() => {});
-        }
-        if (navigator.mediaDevices?.getUserMedia && !window.__birthdayMicStream) {
-          navigator.mediaDevices
-            .getUserMedia({ audio: true })
-            .then((stream) => {
-              window.__birthdayMicStream = stream;
-            })
-            .catch(() => {});
-        }
-      }
-    };
-    askMicEarly();
-    window.addEventListener("pointerdown", askMicEarly, { once: true });
-    return () => {
-      window.removeEventListener("pointerdown", askMicEarly);
-    };
-  }, []);
 
   const prev = () => setPhase((current) => Math.max(current - 1, 0));
   const next = () => setPhase((current) => Math.min(current + 1, 7));
