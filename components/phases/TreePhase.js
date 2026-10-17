@@ -9,8 +9,16 @@ export default function TreePhase({ person, onReplay }) {
           <em>day</em>, {person.name}
         </h1>
         <p>
-          Just like that, you are turning{" "}
-          <strong>{person.age || "another"}</strong>.
+          {person.age && person.age.toString().trim() ? (
+            <>
+              Just like that, you are turning{" "}
+              <strong>{person.age.toString().trim()}</strong>.
+            </>
+          ) : (
+            <>
+              Just like that, another beautiful chapter begins.
+            </>
+          )}
         </p>
         {onReplay && (
           <button type="button" className="replay-btn" onClick={onReplay}>

@@ -40,18 +40,20 @@ const REASON_OPTIONS = [
   "You are unapologetically, wonderfully, beautifully yourself.",
 ];
 
-function calculateAge(dobStr) {
-  if (!dobStr) return "";
-  const birthDate = new Date(dobStr);
-  if (isNaN(birthDate.getTime())) return "";
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const m = today.getMonth() - birthDate.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  return age >= 0 ? age.toString() : "";
-}
+const MONTHS = [
+  { value: "01", label: "January" },
+  { value: "02", label: "February" },
+  { value: "03", label: "March" },
+  { value: "04", label: "April" },
+  { value: "05", label: "May" },
+  { value: "06", label: "June" },
+  { value: "07", label: "July" },
+  { value: "08", label: "August" },
+  { value: "09", label: "September" },
+  { value: "10", label: "October" },
+  { value: "11", label: "November" },
+  { value: "12", label: "December" },
+];
 
 function getWordCount(text) {
   if (!text) return 0;
@@ -83,6 +85,8 @@ export default function BirthdayCreateWizard() {
   const [formData, setFormData] = useState({
     name: "",
     nickname: "",
+    birthMonth: "",
+    birthDay: "",
     dob: "",
     age: "",
     message: "",
@@ -130,11 +134,24 @@ export default function BirthdayCreateWizard() {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === "object") {
           if (parsed.formData && typeof parsed.formData === "object") {
+            let restoredMonth = typeof parsed.formData.birthMonth === "string" ? parsed.formData.birthMonth : "";
+            let restoredDay = typeof parsed.formData.birthDay === "string" ? parsed.formData.birthDay : "";
+            const restoredDob = typeof parsed.formData.dob === "string" ? parsed.formData.dob : "";
+            if ((!restoredMonth || !restoredDay) && restoredDob) {
+              const parts = restoredDob.split("-");
+              if (parts.length === 3) {
+                restoredMonth = parts[1].padStart(2, "0");
+                restoredDay = parseInt(parts[2], 10).toString();
+              }
+            }
+
             setFormData((prev) => ({
               ...prev,
               name: typeof parsed.formData.name === "string" ? parsed.formData.name : prev.name,
               nickname: typeof parsed.formData.nickname === "string" ? parsed.formData.nickname : prev.nickname,
-              dob: typeof parsed.formData.dob === "string" ? parsed.formData.dob : prev.dob,
+              birthMonth: restoredMonth || prev.birthMonth,
+              birthDay: restoredDay || prev.birthDay,
+              dob: restoredDob || prev.dob,
               age: typeof parsed.formData.age === "string" ? parsed.formData.age : prev.age,
               message: typeof parsed.formData.message === "string" ? parsed.formData.message : prev.message,
               reasons:
@@ -217,6 +234,8 @@ export default function BirthdayCreateWizard() {
   const hasDraftData = Boolean(
     formData.name.trim() ||
       formData.nickname.trim() ||
+      formData.birthMonth ||
+      formData.birthDay ||
       formData.dob ||
       formData.age ||
       formData.message.trim() ||
@@ -241,6 +260,8 @@ export default function BirthdayCreateWizard() {
       setFormData({
         name: "",
         nickname: "",
+        birthMonth: "",
+        birthDay: "",
         dob: "",
         age: "",
         message: "",
@@ -257,15 +278,35 @@ export default function BirthdayCreateWizard() {
     }
   };
 
-  // Handle DOB change with auto-age calculation
-  const handleDobChange = (e) => {
-    const val = e.target.value;
-    const computedAge = calculateAge(val);
-    setFormData((prev) => ({
-      ...prev,
-      dob: val,
-      age: computedAge || prev.age,
-    }));
+  // Handle birthday Month & Day selection
+  const handleMonthChange = (monthVal) => {
+    setFormData((prev) => {
+      const dayVal = prev.birthDay;
+      const currentYear = new Date().getFullYear();
+      const dobVal = monthVal && dayVal ? `${currentYear}-${monthVal}-${dayVal.padStart(2, "0")}` : "";
+      const updated = {
+        ...prev,
+        birthMonth: monthVal,
+        dob: dobVal,
+      };
+      syncDraftToServer(updated);
+      return updated;
+    });
+  };
+
+  const handleDayChange = (dayVal) => {
+    setFormData((prev) => {
+      const monthVal = prev.birthMonth;
+      const currentYear = new Date().getFullYear();
+      const dobVal = monthVal && dayVal ? `${currentYear}-${monthVal}-${dayVal.padStart(2, "0")}` : "";
+      const updated = {
+        ...prev,
+        birthDay: dayVal,
+        dob: dobVal,
+      };
+      syncDraftToServer(updated);
+      return updated;
+    });
   };
 
   // Step 3: Handle typing into any of the 5 blank reason fields
@@ -530,7 +571,7 @@ export default function BirthdayCreateWizard() {
               name: formData.name.trim() || "Sunena",
               nickname: formData.nickname.trim() || formData.name.trim() || "Sunny",
               dob: formData.dob,
-              age: formData.age.trim() || "26",
+              age: formData.age ? formData.age.trim() : "",
               date: formData.dob || new Date().toISOString().split("T")[0],
               message:
                 formData.message.trim() ||
@@ -692,35 +733,50 @@ export default function BirthdayCreateWizard() {
 
             <div className="wizard-grid-2">
               <div className="wizard-field-group">
-                <label className="wizard-label">Date of Birth</label>
-                <input
-                  type="date"
-                  className="wizard-input"
-                  value={formData.dob}
-                  onChange={handleDobChange}
-                />
+                <label className="wizard-label">
+                  Birthday (Month &amp; Day)
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: "8px" }}>
+                  <select
+                    className="wizard-input"
+                    value={formData.birthMonth}
+                    onChange={(e) => handleMonthChange(e.target.value)}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <option value="">Select Month</option>
+                    {MONTHS.map((m) => (
+                      <option key={m.value} value={m.value}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    className="wizard-input"
+                    value={formData.birthDay}
+                    onChange={(e) => handleDayChange(e.target.value)}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <option value="">Select Day</option>
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                      <option key={d} value={d.toString()}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="wizard-field-group">
                 <label className="wizard-label">
-                  Age (Turning)
-                  {formData.dob && (
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: 400,
-                        color: "#d95775",
-                        marginLeft: "6px",
-                      }}
-                    >
-                      (Auto-calculated)
-                    </span>
-                  )}
+                  Turning Age <span style={{ fontSize: "11px", fontWeight: 400, color: "#8a6d77" }}>(Optional)</span>
                 </label>
                 <input
-                  type="text"
+                  type="number"
+                  min="1"
+                  max="120"
                   className="wizard-input"
-                  placeholder="e.g. 24"
+                  placeholder="e.g. 25 (Optional)"
                   value={formData.age}
                   onChange={(e) =>
                     setFormData({ ...formData, age: e.target.value })
@@ -1131,6 +1187,8 @@ export default function BirthdayCreateWizard() {
                   setFormData({
                     name: "",
                     nickname: "",
+                    birthMonth: "",
+                    birthDay: "",
                     dob: "",
                     age: "",
                     message: "",

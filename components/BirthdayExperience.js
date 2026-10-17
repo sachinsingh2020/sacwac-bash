@@ -50,7 +50,14 @@ export default function BirthdayExperience({
   publishError = "",
   onClearPublishError,
 }) {
-  const [person, setPerson] = useState(previewData ? { ...fallback, ...previewData } : fallback);
+  const [person, setPerson] = useState(() => {
+    if (!previewData) return fallback;
+    return {
+      ...fallback,
+      ...previewData,
+      age: typeof previewData.age !== "undefined" ? previewData.age : fallback.age,
+    };
+  });
   const [phase, setPhase] = useState(0);
   const [sound, setSound] = useState(true);
   const [popped, setPopped] = useState([]);
@@ -79,7 +86,11 @@ export default function BirthdayExperience({
 
   useEffect(() => {
     if (previewData) {
-      setPerson({ ...fallback, ...previewData });
+      setPerson({
+        ...fallback,
+        ...previewData,
+        age: typeof previewData.age !== "undefined" ? previewData.age : fallback.age,
+      });
       setUploadedGallery(
         Array.isArray(previewData.gallery) ? previewData.gallery.slice(0, 2) : [],
       );
@@ -96,7 +107,11 @@ export default function BirthdayExperience({
       .then((response) => (response.ok ? response.json() : null))
       .then((found) => {
         if (found) {
-          setPerson({ ...fallback, ...found });
+          setPerson({
+            ...fallback,
+            ...found,
+            age: typeof found.age !== "undefined" ? found.age : "",
+          });
           setUploadedGallery(
             Array.isArray(found.gallery) ? found.gallery.slice(0, 2) : [],
           );
