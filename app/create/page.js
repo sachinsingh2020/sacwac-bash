@@ -60,6 +60,20 @@ function getWordCount(text) {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
+function getOrCreateVisitorId() {
+  if (typeof window === "undefined") return "";
+  try {
+    let id = localStorage.getItem("mm_visitor_id");
+    if (!id) {
+      id = "v_" + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+      localStorage.setItem("mm_visitor_id", id);
+    }
+    return id;
+  } catch {
+    return "";
+  }
+}
+
 const STORAGE_KEY = "birthday_bash_create_draft";
 
 export default function BirthdayCreateWizard() {
@@ -119,6 +133,7 @@ export default function BirthdayCreateWizard() {
         body: JSON.stringify({
           templateId,
           formData: data,
+          visitorId: getOrCreateVisitorId(),
         }),
       }).catch((err) => console.warn("Draft auto-sync:", err.message));
     } catch (e) {}
@@ -510,6 +525,7 @@ export default function BirthdayCreateWizard() {
         body: JSON.stringify({
           templateId,
           formData,
+          visitorId: getOrCreateVisitorId(),
         }),
       }).catch((err) => console.warn("Draft ping error:", err.message));
     } catch (e) {}
