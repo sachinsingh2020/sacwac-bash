@@ -17,7 +17,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
     paidSlugs: [],
   });
 
-  // Four main sections: "buyers" | "abandoned" | "users" | "visitors"
+  // Three main sections: "buyers" | "abandoned" | "visitors"
   const [activeMainTab, setActiveMainTab] = useState("buyers");
   const [selectedSlug, setSelectedSlug] = useState("all");
   const [customDate, setCustomDate] = useState("");
@@ -34,15 +34,13 @@ export default function VisitorAnalyticsView({ adminToken }) {
   const [loadingAbandoned, setLoadingAbandoned] = useState(true);
   const [previewingTemplate, setPreviewingTemplate] = useState(null);
   const [historyModalTemplate, setHistoryModalTemplate] = useState(null);
+  const [convertModalTemplate, setConvertModalTemplate] = useState(null);
+  const [isConverting, setIsConverting] = useState(false);
+  const [convertError, setConvertError] = useState("");
+  const [copiedLiveSlug, setCopiedLiveSlug] = useState("");
 
-  // Logged-in users state
-  const [usersList, setUsersList] = useState([]);
-  const [loadingUsers, setLoadingUsers] = useState(true);
-  const [userSearchQuery, setUserSearchQuery] = useState("");
-
-  // Search queries for abandoned tabs
+  // Search query for abandoned tab
   const [abandonedSearchQuery, setAbandonedSearchQuery] = useState("");
-  const [loggedInAbandonedSearchQuery, setLoggedInAbandonedSearchQuery] = useState("");
 
   // Permanent deletion warning modal state
   const [deleteModalItem, setDeleteModalItem] = useState(null);
@@ -52,10 +50,6 @@ export default function VisitorAnalyticsView({ adminToken }) {
   // 1-month reminder check state
   const [runningReminderCheck, setRunningReminderCheck] = useState(false);
   const [reminderResult, setReminderResult] = useState(null);
-
-  // Email offer sending state for high-intent abandoned leads
-  const [sendingOffer, setSendingOffer] = useState({});
-  const [sentOffers, setSentOffers] = useState({});
 
   const fetchAnalytics = useCallback(async () => {
     setLoading(true);
@@ -96,28 +90,10 @@ export default function VisitorAnalyticsView({ adminToken }) {
     }
   }, [adminToken]);
 
-  const fetchUsers = useCallback(async () => {
-    setLoadingUsers(true);
-    try {
-      const headers = {};
-      if (adminToken) headers["x-admin-token"] = adminToken;
-      const res = await fetch("/api/admin/users", { headers });
-      if (res.ok) {
-        const json = await res.json();
-        setUsersList(Array.isArray(json) ? json : []);
-      }
-    } catch (err) {
-      console.error("Failed to load users:", err);
-    } finally {
-      setLoadingUsers(false);
-    }
-  }, [adminToken]);
-
   useEffect(() => {
     fetchAnalytics();
     fetchAbandonedTemplates();
-    fetchUsers();
-  }, [fetchAnalytics, fetchAbandonedTemplates, fetchUsers]);
+  }, [fetchAnalytics, fetchAbandonedTemplates]);
 
   // Run 1-month reminder email trigger check
   const handleTriggerReminders = async () => {
@@ -198,16 +174,6 @@ export default function VisitorAnalyticsView({ adminToken }) {
     return (data.records || []).filter((r) => !r.slug).length;
   }, [data.records]);
 
-  // Filter users by search
-  const filteredUsers = useMemo(() => {
-    if (!userSearchQuery.trim()) return usersList;
-    const q = userSearchQuery.toLowerCase();
-    return usersList.filter((u) =>
-      (u.email && u.email.toLowerCase().includes(q)) ||
-      (u.name && u.name.toLowerCase().includes(q))
-    );
-  }, [usersList, userSearchQuery]);
-
   // Helper to sort abandoned templates by lastVisitedAt (descending) so active returning visitors are on top
   const sortAbandonedByLastVisited = (a, b) => {
     const timeA = new Date(a.lastVisitedAt || a.updatedAt || a.createdAt || 0).getTime();
@@ -254,58 +220,87 @@ export default function VisitorAnalyticsView({ adminToken }) {
     );
   }, [abandonedTemplates, abandonedSearchQuery]);
 
-  // Filter logged-in abandoned templates and sort by lastVisitedAt
-  const loggedInAbandoned = useMemo(() => {
-    const list = abandonedTemplates
-      .filter((t) => t.userEmail && t.userEmail.trim())
-      .sort(sortAbandonedByLastVisited);
-    if (!loggedInAbandonedSearchQuery.trim()) return list;
-    const q = loggedInAbandonedSearchQuery.toLowerCase();
-    return list.filter((t) =>
-      (t.name && t.name.toLowerCase().includes(q)) ||
-      (t.nickname && t.nickname.toLowerCase().includes(q)) ||
-      (t.sender && t.sender.toLowerCase().includes(q)) ||
-      (t.userEmail && t.userEmail.toLowerCase().includes(q)) ||
-      (t.clientIp && t.clientIp.toLowerCase().includes(q))
-    );
-  }, [abandonedTemplates, loggedInAbandonedSearchQuery]);
-
-  const handleSendOffer = async (template, price) => {
-    const key = `${template.templateId || template._id}_${price}`;
-    if (!template.userEmail) {
-      alert("No email address found for this user.");
-      return;
+  const handleCopyLiveLink = (slug) => {
+    if (typeof window === "undefined" || !slug) return;
+    const fullUrl = `${window.location.origin}/${slug}`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(fullUrl).then(() => {
+        setCopiedLiveSlug(slug);
+        setTimeout(() => setCopiedLiveSlug(""), 2200);
+      });
     }
-    setSendingOffer((prev) => ({ ...prev, [key]: true }));
+  };
+
+  const handleConfirmConvert = async () => {
+    if (!convertModalTemplate) return;
+    setIsConverting(true);
+    setConvertError("");
 
     try {
       const headers = { "Content-Type": "application/json" };
       if (adminToken) headers["x-admin-token"] = adminToken;
 
-      const res = await fetch("/api/admin/send-offer", {
+      const res = await fetch("/api/admin/convert-template", {
         method: "POST",
         headers,
         body: JSON.stringify({
-          templateId: template.templateId,
-          price,
-          email: template.userEmail,
+          templateId: convertModalTemplate.templateId || convertModalTemplate._id,
         }),
       });
 
       const json = await res.json();
       if (!res.ok) {
-        throw new Error(json.error || `Failed to send ₹${price} offer email.`);
+        throw new Error(json.error || "Failed to convert template.");
       }
 
-      setSentOffers((prev) => ({
-        ...prev,
-        [key]: `✓ ₹${price} Sent!`,
-      }));
+      // Optimistically update abandoned template state
+      setAbandonedTemplates((prev) =>
+        prev.map((t) =>
+          (t._id === convertModalTemplate._id || t.templateId === convertModalTemplate.templateId)
+            ? { ...t, isConverted: true, convertedSlug: json.slug }
+            : t
+        )
+      );
+
+      // Prepend to paidBuyers
+      if (json.page || json.slug) {
+        const pageData = json.page || {};
+        const newBuyer = {
+          id: pageData._id || json.slug,
+          _id: pageData._id || json.slug,
+          slug: json.slug,
+          name: pageData.name || convertModalTemplate.name,
+          nickname: pageData.nickname || convertModalTemplate.nickname || "",
+          dob: pageData.dob || convertModalTemplate.dob || "",
+          age: pageData.age || convertModalTemplate.age || "",
+          date: pageData.date || convertModalTemplate.date || "",
+          photo: pageData.photo || convertModalTemplate.photo || "",
+          paymentId: "admin_converted",
+          orderId: "admin_manual",
+          convertedByAdmin: true,
+          amountPaid: 0,
+          userEmail: pageData.userEmail || convertModalTemplate.userEmail || "",
+          createdAt: pageData.createdAt || new Date().toISOString(),
+          totalVisits: 0,
+          uniqueVisitors: 0,
+          lastVisit: null,
+        };
+
+        setData((prev) => ({
+          ...prev,
+          paidBuyers: [newBuyer, ...(prev.paidBuyers || [])],
+          paidBuyersCount: (prev.paidBuyersCount || 0) + 1,
+        }));
+      }
+
+      setConvertModalTemplate(null);
+      handleCopyLiveLink(json.slug);
+      alert(`🎉 Successfully converted! Live link: /${json.slug}\nLink copied to clipboard.`);
     } catch (err) {
-      console.error(`Error sending ₹${price} offer:`, err);
-      alert(err.message || `Failed to send ₹${price} offer email.`);
+      console.error("Conversion error:", err);
+      setConvertError(err.message || "Failed to convert template.");
     } finally {
-      setSendingOffer((prev) => ({ ...prev, [key]: false }));
+      setIsConverting(false);
     }
   };
 
@@ -453,30 +448,6 @@ export default function VisitorAnalyticsView({ adminToken }) {
           <span>people who create but didn&apos;t buy</span>
           <span className="analytics-tab-pill-badge" style={{ background: "#fff0f3", color: "#d95775" }}>
             {loadingAbandoned ? "..." : abandonedTemplates.length}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          className={`analytics-view-tab-btn ${activeMainTab === "abandoned_loggedin" ? "active" : ""}`}
-          onClick={() => setActiveMainTab("abandoned_loggedin")}
-        >
-          <span>✉️</span>
-          <span>Created &amp; Logged In (Didn&apos;t Buy)</span>
-          <span className="analytics-tab-pill-badge" style={{ background: "#eff6ff", color: "#2563eb" }}>
-            {loadingAbandoned ? "..." : abandonedTemplates.filter((t) => t.userEmail && t.userEmail.trim()).length}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          className={`analytics-view-tab-btn ${activeMainTab === "users" ? "active" : ""}`}
-          onClick={() => setActiveMainTab("users")}
-        >
-          <span>👥</span>
-          <span>Logged In Users</span>
-          <span className="analytics-tab-pill-badge" style={{ background: "#eff6ff", color: "#2563eb" }}>
-            {loadingUsers ? "..." : usersList.length}
           </span>
         </button>
 
@@ -633,8 +604,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
                           <th>Shareable Link</th>
                           <th>Amount &amp; Payment ID</th>
                           <th>Birthday Date</th>
-                          <th>Traffic to Link</th>
-                          <th>Actions</th>
+                          <th style={{ whiteSpace: "nowrap" }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -683,71 +653,96 @@ export default function VisitorAnalyticsView({ adminToken }) {
                             </td>
 
                             <td>
-                              <div>
-                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              {b.convertedByAdmin || b.paymentId === "admin_converted" ? (
+                                <div>
                                   <span
                                     style={{
+                                      display: "inline-block",
                                       fontWeight: 800,
-                                      color:
-                                        b.amountPaid === 29
-                                          ? "#dc2626"
-                                          : b.amountPaid === 39
-                                          ? "#be185d"
-                                          : b.amountPaid === 49
-                                          ? "#d95775"
-                                          : "#16a34a",
-                                      fontSize: "14px",
+                                      fontSize: "12px",
+                                      padding: "3px 10px",
+                                      borderRadius: "999px",
+                                      background: "#ecfdf5",
+                                      color: "#047857",
+                                      border: "1px solid #a7f3d0",
+                                      letterSpacing: "0.2px",
                                     }}
                                   >
-                                    ₹{b.amountPaid !== undefined && b.amountPaid !== null ? b.amountPaid : 199}
+                                    🪄 Converted
                                   </span>
-                                  <span
-                                    style={{
-                                      fontSize: "10px",
-                                      fontWeight: 700,
-                                      padding: "2px 6px",
-                                      borderRadius: "6px",
-                                      background:
-                                        b.amountPaid === 29
-                                          ? "#fee2e2"
-                                          : b.amountPaid === 39
-                                          ? "#fce7f3"
-                                          : b.amountPaid === 49
-                                          ? "#fff0f3"
-                                          : "#f0fdf4",
-                                      color:
-                                        b.amountPaid === 29
-                                          ? "#b91c1c"
-                                          : b.amountPaid === 39
-                                          ? "#be185d"
-                                          : b.amountPaid === 49
-                                          ? "#d95775"
-                                          : "#166534",
-                                      border:
-                                        b.amountPaid === 29
-                                          ? "1px solid #fca5a5"
-                                          : b.amountPaid === 39
-                                          ? "1px solid #fbcfe8"
-                                          : b.amountPaid === 49
-                                          ? "1px solid #ffd6e1"
-                                          : "1px solid #bbf7d0",
-                                    }}
-                                  >
-                                    {b.amountPaid === 29
-                                      ? "Final Offer (₹29)"
-                                      : b.amountPaid === 39
-                                      ? "Special Offer (₹39)"
-                                      : b.amountPaid === 49
-                                      ? "Login (₹49)"
-                                      : "Standard (₹199)"}
-                                  </span>
+                                  <div style={{ marginTop: "4px" }}>
+                                    <span className="analytics-ip-code" style={{ fontSize: "11px", color: "#64748b" }}>
+                                      Admin Manual
+                                    </span>
+                                  </div>
                                 </div>
-                                <div style={{ marginTop: "4px" }}>
-                                  <span className="analytics-ip-code" style={{ fontSize: "11px" }}>
-                                    {b.paymentId || "N/A"}
-                                  </span>
+                              ) : (
+                                <div>
+                                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <span
+                                      style={{
+                                        fontWeight: 800,
+                                        color:
+                                          b.amountPaid === 29
+                                            ? "#dc2626"
+                                            : b.amountPaid === 39
+                                            ? "#be185d"
+                                            : b.amountPaid === 49
+                                            ? "#d95775"
+                                            : "#16a34a",
+                                        fontSize: "14px",
+                                      }}
+                                    >
+                                      ₹{b.amountPaid !== undefined && b.amountPaid !== null ? b.amountPaid : 199}
+                                    </span>
+                                    <span
+                                      style={{
+                                        fontSize: "10px",
+                                        fontWeight: 700,
+                                        padding: "2px 6px",
+                                        borderRadius: "6px",
+                                        background:
+                                          b.amountPaid === 29
+                                            ? "#fee2e2"
+                                            : b.amountPaid === 39
+                                            ? "#fce7f3"
+                                            : b.amountPaid === 49
+                                            ? "#fff0f3"
+                                            : "#f0fdf4",
+                                        color:
+                                          b.amountPaid === 29
+                                            ? "#b91c1c"
+                                            : b.amountPaid === 39
+                                            ? "#be185d"
+                                            : b.amountPaid === 49
+                                            ? "#d95775"
+                                            : "#166534",
+                                        border:
+                                          b.amountPaid === 29
+                                            ? "1px solid #fca5a5"
+                                            : b.amountPaid === 39
+                                            ? "1px solid #fbcfe8"
+                                            : b.amountPaid === 49
+                                            ? "1px solid #ffd6e1"
+                                            : "1px solid #bbf7d0",
+                                      }}
+                                    >
+                                      {b.amountPaid === 29
+                                        ? "Final Offer (₹29)"
+                                        : b.amountPaid === 39
+                                        ? "Special Offer (₹39)"
+                                        : b.amountPaid === 49
+                                        ? "Login (₹49)"
+                                        : "Standard (₹199)"}
+                                    </span>
+                                  </div>
+                                  <div style={{ marginTop: "4px" }}>
+                                    <span className="analytics-ip-code" style={{ fontSize: "11px" }}>
+                                      {b.paymentId || "N/A"}
+                                    </span>
+                                  </div>
                                 </div>
-                              </div>
+                              )}
                             </td>
 
                             <td>
@@ -757,18 +752,15 @@ export default function VisitorAnalyticsView({ adminToken }) {
                             </td>
 
                             <td>
-                              <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                                <span className="badge-num" style={{ background: "#fef0f3", color: "#d95775" }}>
-                                  {b.totalVisits || 0} views
-                                </span>
-                                <span style={{ fontSize: "11px", color: "#8a6e76" }}>
-                                  ({b.uniqueVisitors || 0} unique)
-                                </span>
-                              </div>
-                            </td>
-
-                            <td>
-                              <div style={{ display: "flex", gap: "6px" }}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "row",
+                                  alignItems: "center",
+                                  gap: "6px",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
                                 <a
                                   href={`/${b.slug}`}
                                   target="_blank"
@@ -860,7 +852,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
               <input
                 type="text"
                 className="analytics-search-input"
-                placeholder="Search drafts by name, email, or IP..."
+                placeholder="Search drafts by name or sender..."
                 value={abandonedSearchQuery}
                 onChange={(e) => setAbandonedSearchQuery(e.target.value)}
                 style={{ maxWidth: "300px" }}
@@ -881,10 +873,8 @@ export default function VisitorAnalyticsView({ adminToken }) {
                       <th>Celebrant &amp; Sender</th>
                       <th>Visits / Activity</th>
                       <th>Last Visited / Created</th>
-                      <th>User Email (if signed in)</th>
-                      <th>IP &amp; Device</th>
                       <th>Photos &amp; Reasons</th>
-                      <th>Action</th>
+                      <th style={{ whiteSpace: "nowrap" }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -988,29 +978,48 @@ export default function VisitorAnalyticsView({ adminToken }) {
                         </td>
 
                         <td>
-                          {t.userEmail ? (
-                            <span style={{ fontSize: "12px", color: "#2563eb", fontWeight: 600 }}>
-                              ✉️ {t.userEmail}
-                            </span>
-                          ) : (
-                            <span className="muted">Guest (Not logged in)</span>
-                          )}
-                        </td>
-
-                        <td>
-                          <div>
-                            <span className="analytics-ip-code" style={{ fontSize: "11px" }}>{t.clientIp || "Unknown"}</span>
-                          </div>
-                        </td>
-
-                        <td>
                           <div style={{ fontSize: "12px", color: "#54303b" }}>
                             <span>📸 {(t.gallery || []).length} gallery</span> • <span>✦ {(t.reasons || []).length} reasons</span>
                           </div>
                         </td>
 
                         <td>
-                          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "row",
+                              gap: "6px",
+                              alignItems: "center",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {t.isConverted ? (
+                              <button
+                                type="button"
+                                className="analytics-view-btn"
+                                onClick={() => handleCopyLiveLink(t.convertedSlug)}
+                                style={{ background: "#ecfdf5", color: "#047857", borderColor: "#a7f3d0", fontWeight: 700 }}
+                                title="This template has already been converted to a live celebration link"
+                              >
+                                {copiedLiveSlug === t.convertedSlug ? "✓ Copied!" : "✓ Converted"}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="analytics-view-btn"
+                                onClick={() => setConvertModalTemplate(t)}
+                                style={{
+                                  background: "linear-gradient(135deg, #10b981, #059669)",
+                                  color: "#ffffff",
+                                  borderColor: "#059669",
+                                  fontWeight: 700,
+                                  boxShadow: "0 2px 4px rgba(16, 185, 129, 0.2)",
+                                }}
+                                title="Convert this template into a live celebration link without payment"
+                              >
+                                🪄 Convert
+                              </button>
+                            )}
                             <button
                               type="button"
                               className="analytics-view-btn"
@@ -1066,393 +1075,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
       )}
 
       {/* ============================================================== */}
-      {/* TAB: CREATED TEMPLATE AND LOGGED IN BUT DIDN'T BUY             */}
-      {/* ============================================================== */}
-      {activeMainTab === "abandoned_loggedin" && (
-        <section className="abandoned-section" aria-label="People who created template and logged in but didn't buy">
-          <div className="buyers-header-card">
-            <div className="buyers-header-title">
-              <h3>
-                <span>✉️</span>
-                <span>Created &amp; Logged In (Didn&apos;t Buy)</span>
-              </h3>
-              <p>
-                Every visitor who signed into their account (Google or Email OTP), customized their birthday celebration with photos &amp; reasons, but abandoned checkout before completing the purchase.
-              </p>
-            </div>
-            <button
-              type="button"
-              className="analytics-refresh-btn"
-              onClick={fetchAbandonedTemplates}
-              disabled={loadingAbandoned}
-            >
-              {loadingAbandoned ? "Refreshing..." : "↻ Refresh List"}
-            </button>
-          </div>
-
-          {loadingAbandoned ? (
-            <div className="analytics-page-loader">
-              <div className="analytics-circle-spinner" />
-              <h3 className="analytics-loader-title">Loading High-Intent Logged-In Leads...</h3>
-              <p className="analytics-loader-sub">Fetching logged-in users with saved celebration drafts and emails</p>
-            </div>
-          ) : (
-            <div className="analytics-table-card">
-            <div className="analytics-table-head-row">
-              <h3 className="analytics-table-title">
-                <span>🎯 High-Intent Logged-In Leads ({loggedInAbandoned.length})</span>
-              </h3>
-              <input
-                type="text"
-                className="analytics-search-input"
-                placeholder="Search by name, email, or IP..."
-                value={loggedInAbandonedSearchQuery}
-                onChange={(e) => setLoggedInAbandonedSearchQuery(e.target.value)}
-                style={{ maxWidth: "300px" }}
-              />
-            </div>
-
-            {loggedInAbandoned.length === 0 ? (
-              <div className="analytics-empty">
-                <div className="analytics-empty-icon">✉️</div>
-                <strong>No logged-in abandoned templates found.</strong>
-                <p>When someone logs in, designs their celebration, and exits without paying, their draft and email will appear here.</p>
-              </div>
-            ) : (
-              <div className="analytics-table-wrap">
-                <table className="analytics-table">
-                  <thead>
-                    <tr>
-                      <th>Celebrant Details</th>
-                      <th>Logged-In User Email</th>
-                      <th>Created At</th>
-                      <th>IP &amp; Device</th>
-                      <th>Photos &amp; Reasons</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loggedInAbandoned.map((t) => {
-                      const visits = t.visitCount || (t.creationHistory && t.creationHistory.length) || 1;
-                      return (
-                      <tr key={t._id || t.templateId}>
-                        <td>
-                          <div className="buyer-profile-cell">
-                            {t.photo ? (
-                              <img src={t.photo} alt={t.name} className="buyer-thumb-avatar" />
-                            ) : (
-                              <div className="buyer-monogram-avatar">
-                                {t.name ? t.name[0].toUpperCase() : "🎂"}
-                              </div>
-                            )}
-                            <div>
-                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                                <strong>{t.name}</strong>
-                                {visits > 1 && (
-                                  <span
-                                    style={{
-                                      background: "linear-gradient(135deg, #fef2f2, #fee2e2)",
-                                      border: "1px solid #fecaca",
-                                      color: "#dc2626",
-                                      fontSize: "10.5px",
-                                      fontWeight: 800,
-                                      padding: "2px 7px",
-                                      borderRadius: "999px",
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: "3px",
-                                    }}
-                                    title={`This user visited and customized templates ${visits} times!`}
-                                  >
-                                    🔥 {visits} visits
-                                  </span>
-                                )}
-                              </div>
-                              {t.nickname && <span className="buyer-nickname">&ldquo;{t.nickname}&rdquo;</span>}
-                              {t.sender && (
-                                <span style={{ display: "block", fontSize: "11px", color: "#d95775", fontWeight: 700 }}>
-                                  💌 From: {t.sender}
-                                </span>
-                              )}
-                              <span style={{ display: "block", fontSize: "11px", color: "#8a6d77" }}>
-                                DOB: {t.date || t.dob || "N/A"} {t.age ? `(${t.age} yrs)` : ""}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td>
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span style={{ fontSize: "12.5px", color: "#2563eb", fontWeight: 700 }}>
-                              ✉️ {t.userEmail}
-                            </span>
-                            <button
-                              type="button"
-                              className="buyer-copy-btn"
-                              onClick={() => {
-                                if (navigator.clipboard?.writeText) {
-                                  navigator.clipboard.writeText(t.userEmail);
-                                }
-                              }}
-                              title="Copy Email Address"
-                            >
-                              Copy
-                            </button>
-                          </div>
-                        </td>
-
-                        <td>
-                          <span style={{ fontSize: "11.5px", color: "#6e4f59", whiteSpace: "nowrap", display: "block" }}>
-                            <strong>{formatTimestamp(t.lastVisitedAt || t.updatedAt || t.createdAt)}</strong>
-                          </span>
-                          {t.lastVisitedAt && t.createdAt && new Date(t.lastVisitedAt).getTime() - new Date(t.createdAt).getTime() > 60000 && (
-                            <span style={{ fontSize: "10.5px", color: "#9ca3af", display: "block" }}>
-                              First: {formatTimestamp(t.createdAt)}
-                            </span>
-                          )}
-                        </td>
-
-                        <td>
-                          <div>
-                            <span className="analytics-ip-code" style={{ fontSize: "11px" }}>{t.clientIp || "Unknown"}</span>
-                          </div>
-                        </td>
-
-                        <td>
-                          <div style={{ fontSize: "12px", color: "#54303b" }}>
-                            <span>📸 {(t.gallery || []).length} gallery</span> • <span>✦ {(t.reasons || []).length} reasons</span>
-                          </div>
-                        </td>
-
-                        <td>
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
-                            {/* Send ₹39 Offer button */}
-                            <button
-                              type="button"
-                              className="analytics-view-btn analytics-offer-btn-39"
-                              onClick={() => handleSendOffer(t, 39)}
-                              disabled={sendingOffer[`${t.templateId || t._id}_39`]}
-                              title="Send ₹39 Special Offer email to user"
-                            >
-                              {sendingOffer[`${t.templateId || t._id}_39`]
-                                ? "Sending..."
-                                : sentOffers[`${t.templateId || t._id}_39`] || "📧 Send ₹39 Offer"}
-                            </button>
-
-                            {/* Send ₹29 Offer button */}
-                            <button
-                              type="button"
-                              className="analytics-view-btn analytics-offer-btn-29"
-                              onClick={() => handleSendOffer(t, 29)}
-                              disabled={sendingOffer[`${t.templateId || t._id}_29`]}
-                              title="Send ₹29 Final Offer email to user"
-                            >
-                              {sendingOffer[`${t.templateId || t._id}_29`]
-                                ? "Sending..."
-                                : sentOffers[`${t.templateId || t._id}_29`] || "🔥 Send ₹29 Offer"}
-                            </button>
-
-                            <button
-                              type="button"
-                              className="analytics-view-btn"
-                              onClick={() => setPreviewingTemplate(t)}
-                              style={{ background: "#d95775", color: "#fff", borderColor: "#d95775" }}
-                              title="Inspect full celebration preview"
-                            >
-                              👀 View
-                            </button>
-                            <button
-                              type="button"
-                              className="analytics-view-btn"
-                              onClick={() => setHistoryModalTemplate(t)}
-                              style={{
-                                background: visits > 1 ? "#eff6ff" : "#f8fafc",
-                                color: visits > 1 ? "#1d4ed8" : "#475569",
-                                borderColor: visits > 1 ? "#bfdbfe" : "#cbd5e1",
-                                fontWeight: 700,
-                              }}
-                              title="Check how many times this user came and created"
-                            >
-                              📜 History ({visits})
-                            </button>
-                            <button
-                              type="button"
-                              className="analytics-view-btn analytics-delete-action-btn"
-                              onClick={() =>
-                                promptDelete(
-                                  "abandoned",
-                                  t._id,
-                                  t.name,
-                                  `Logged in as: ${t.userEmail} • Created: ${formatTimestamp(t.createdAt)}`,
-                                  null,
-                                  true
-                                )
-                              }
-                              title="Permanently delete this draft template and its Cloudinary photos"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-          )}
-        </section>
-      )}
-
-      {/* ============================================================== */}
-      {/* TAB 3: LOGGED IN USERS                                         */}
-      {/* ============================================================== */}
-      {activeMainTab === "users" && (
-        <section className="users-section" aria-label="Logged In Users">
-          <div className="buyers-header-card">
-            <div className="buyers-header-title">
-              <h3>
-                <span>👥</span>
-                <span>Dedicated Logged In Users Directory</span>
-              </h3>
-              <p>
-                Permanent list of all registered and logged in users with their email addresses for your records and future communication.
-              </p>
-            </div>
-            <button
-              type="button"
-              className="analytics-refresh-btn"
-              onClick={fetchUsers}
-              disabled={loadingUsers}
-            >
-              {loadingUsers ? "Refreshing..." : "↻ Refresh Users"}
-            </button>
-          </div>
-
-          {loadingUsers ? (
-            <div className="analytics-page-loader">
-              <div className="analytics-circle-spinner" />
-              <h3 className="analytics-loader-title">Loading Registered Users...</h3>
-              <p className="analytics-loader-sub">Fetching user directory and authentication profiles</p>
-            </div>
-          ) : (
-            <div className="analytics-table-card">
-            <div className="analytics-table-head-row">
-              <h3 className="analytics-table-title">
-                <span>📧 Registered Users ({filteredUsers.length})</span>
-              </h3>
-              <input
-                type="text"
-                className="analytics-search-input"
-                placeholder="Search email or name..."
-                value={userSearchQuery}
-                onChange={(e) => setUserSearchQuery(e.target.value)}
-              />
-            </div>
-
-            {filteredUsers.length === 0 ? (
-              <div className="analytics-empty">
-                <div className="analytics-empty-icon">👥</div>
-                <strong>No registered users found.</strong>
-                <p>When visitors sign in via Google OAuth or Email OTP to claim the ₹49 rate, their profile and email are permanently saved here.</p>
-              </div>
-            ) : (
-              <div className="analytics-table-wrap">
-                <table className="analytics-table">
-                  <thead>
-                    <tr>
-                      <th>User Name &amp; Profile</th>
-                      <th>Email Address</th>
-                      <th>Login Provider</th>
-                      <th>First Joined</th>
-                      <th>Last Login</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUsers.map((u) => (
-                      <tr key={u._id || u.id || u.email}>
-                        <td>
-                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                            {u.picture ? (
-                              <img src={u.picture} alt={u.name} className="buyer-thumb-avatar" />
-                            ) : (
-                              <div className="buyer-monogram-avatar" style={{ background: "#e0f2fe", color: "#0369a1" }}>
-                                {u.name ? u.name[0].toUpperCase() : "U"}
-                              </div>
-                            )}
-                            <strong>{u.name || "User"}</strong>
-                          </div>
-                        </td>
-
-                        <td>
-                          <span style={{ fontSize: "13px", fontWeight: 600, color: "#1e3a8a" }}>
-                            {u.email}
-                          </span>
-                        </td>
-
-                        <td>
-                          <span
-                            style={{
-                              display: "inline-block",
-                              padding: "4px 10px",
-                              borderRadius: "12px",
-                              fontSize: "11.5px",
-                              fontWeight: 700,
-                              background: u.provider === "google" ? "#fee2e2" : "#f1f5f9",
-                              color: u.provider === "google" ? "#b91c1c" : "#475569",
-                            }}
-                          >
-                            {u.provider === "google" ? "Google OAuth" : "Email OTP"}
-                          </span>
-                        </td>
-
-                        <td>
-                          <span style={{ fontSize: "11.5px", color: "#64748b" }}>
-                            {formatTimestamp(u.createdAt)}
-                          </span>
-                        </td>
-
-                        <td>
-                          <span style={{ fontSize: "11.5px", color: "#64748b" }}>
-                            {formatTimestamp(u.lastLoginAt || u.createdAt)}
-                          </span>
-                        </td>
-
-                        <td>
-                          <button
-                            type="button"
-                            className="analytics-view-btn analytics-delete-action-btn"
-                            onClick={() =>
-                              promptDelete(
-                                "user",
-                                u._id || u.id,
-                                u.email,
-                                `Name: ${u.name || "User"} • Provider: ${u.provider}`,
-                                null,
-                                false
-                              )
-                            }
-                            title="Permanently delete this registered user account"
-                          >
-                            🗑️ Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-          )}
-        </section>
-      )}
-
-      {/* ============================================================== */}
-      {/* TAB 4: VISITOR ANALYTICS & TRAFFIC (Max 2,000 normal visits)    */}
+      {/* TAB 3: VISITOR ANALYTICS & TRAFFIC (Max 2,000 normal visits)    */}
       {/* ============================================================== */}
       {activeMainTab === "visitors" && (
         <section className="traffic-section" aria-label="Visitor Traffic Section">
@@ -1689,7 +1312,29 @@ export default function VisitorAnalyticsView({ adminToken }) {
               <span className="admin-preview-dot-pulse" />
               <div className="admin-preview-info-text">
                 <span className="admin-preview-badge">Draft Template</span>
-                <span className="admin-preview-name">{previewingTemplate.name}</span>
+                <span className="admin-preview-name">For: {previewingTemplate.name}</span>
+                {previewingTemplate.sender ? (
+                  <span
+                    style={{
+                      background: "#fff1f2",
+                      border: "1px solid #fecdd3",
+                      color: "#e11d48",
+                      fontSize: "12px",
+                      fontWeight: 800,
+                      padding: "2px 9px",
+                      borderRadius: "999px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "3px",
+                    }}
+                  >
+                    💌 Created by: {previewingTemplate.sender}
+                  </span>
+                ) : (
+                  <span style={{ fontSize: "11px", color: "#8a6d77" }}>
+                    (Creator: Not specified)
+                  </span>
+                )}
                 {previewingTemplate.age && (
                   <span className="admin-preview-meta">({previewingTemplate.age} yrs)</span>
                 )}
@@ -1727,8 +1372,10 @@ export default function VisitorAnalyticsView({ adminToken }) {
               isPreview={true}
               isAdminPreview={true}
               previewData={{
+                ...previewingTemplate,
                 name: previewingTemplate.name,
                 nickname: previewingTemplate.nickname || previewingTemplate.name,
+                sender: previewingTemplate.sender || "",
                 dob: previewingTemplate.dob,
                 age: previewingTemplate.age,
                 date: previewingTemplate.date,
@@ -2155,6 +1802,191 @@ export default function VisitorAnalyticsView({ adminToken }) {
                 disabled={isDeleting}
               >
                 {isDeleting ? "Deleting..." : "🗑️ Delete Permanently"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* CONVERT TEMPLATE CONFIRMATION MODAL                            */}
+      {/* ============================================================== */}
+      {convertModalTemplate && (
+        <div
+          className="analytics-modal-backdrop"
+          onClick={() => !isConverting && setConvertModalTemplate(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="analytics-modal"
+            style={{ maxWidth: "480px" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="analytics-modal-header" style={{ borderBottom: "1px solid #f1f5f9" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "50%",
+                    background: "#ecfdf5",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "20px",
+                  }}
+                >
+                  🪄
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: "#0f172a" }}>
+                    Convert Template to Live Link
+                  </h3>
+                  <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>
+                    Create live celebration page without payment
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="analytics-modal-close-btn"
+                onClick={() => !isConverting && setConvertModalTemplate(null)}
+                disabled={isConverting}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="analytics-modal-body" style={{ padding: "20px" }}>
+              <p style={{ margin: "0 0 16px 0", fontSize: "15px", color: "#1e293b", fontWeight: 600, lineHeight: 1.5 }}>
+                Are you sure you want to convert this template into link?
+              </p>
+
+              <div
+                style={{
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "10px",
+                  padding: "14px 16px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "14px",
+                }}
+              >
+                {convertModalTemplate.photo ? (
+                  <img
+                    src={convertModalTemplate.photo}
+                    alt={convertModalTemplate.name}
+                    style={{
+                      width: "48px",
+                      height: "48px",
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                      border: "2px solid #e2e8f0",
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: "48px",
+                      height: "48px",
+                      borderRadius: "50%",
+                      background: "#fee2e2",
+                      color: "#dc2626",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontWeight: 800,
+                      fontSize: "18px",
+                    }}
+                  >
+                    {convertModalTemplate.name ? convertModalTemplate.name[0].toUpperCase() : "🎂"}
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h4 style={{ margin: "0 0 4px 0", fontSize: "15px", fontWeight: 800, color: "#0f172a" }}>
+                    {convertModalTemplate.name}
+                    {convertModalTemplate.nickname ? ` (${convertModalTemplate.nickname})` : ""}
+                  </h4>
+                  <div style={{ fontSize: "12px", color: "#64748b" }}>
+                    {convertModalTemplate.userEmail ? (
+                      <span style={{ color: "#2563eb", fontWeight: 600 }}>✉️ {convertModalTemplate.userEmail}</span>
+                    ) : (
+                      <span>Guest User</span>
+                    )}
+                    {(convertModalTemplate.date || convertModalTemplate.dob) && (
+                      <span> • 📅 {convertModalTemplate.date || convertModalTemplate.dob}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {convertError && (
+                <div
+                  style={{
+                    marginTop: "14px",
+                    padding: "10px 12px",
+                    background: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    borderRadius: "8px",
+                    color: "#dc2626",
+                    fontSize: "12.5px",
+                    fontWeight: 600,
+                  }}
+                >
+                  ⚠️ {convertError}
+                </div>
+              )}
+            </div>
+
+            <div
+              className="analytics-modal-footer"
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "10px",
+                padding: "14px 20px",
+                borderTop: "1px solid #f1f5f9",
+              }}
+            >
+              <button
+                type="button"
+                className="analytics-modal-footer-btn"
+                onClick={() => setConvertModalTemplate(null)}
+                disabled={isConverting}
+                style={{
+                  background: "#f1f5f9",
+                  color: "#475569",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "8px",
+                  padding: "8px 16px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="analytics-modal-footer-btn"
+                onClick={handleConfirmConvert}
+                disabled={isConverting}
+                style={{
+                  background: "linear-gradient(135deg, #10b981, #059669)",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "8px 18px",
+                  fontWeight: 700,
+                  cursor: isConverting ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  boxShadow: "0 2px 4px rgba(16, 185, 129, 0.25)",
+                }}
+              >
+                {isConverting ? "Converting..." : "Yes, Convert to Link ✨"}
               </button>
             </div>
           </div>

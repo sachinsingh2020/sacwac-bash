@@ -169,7 +169,11 @@ export default function QuestionTeaserPhase({ person, onYes }) {
         {/* Top Pill Badge */}
         <div className="qt-pill">
           <span className="qt-pill-dot" />
-          <span>A Secret Message</span>
+          <span>
+            {person?.sender?.trim()
+              ? `A Secret Surprise from ${person.sender.trim()}`
+              : "A Secret Message"}
+          </span>
         </div>
 
         {/* First Line */}
