@@ -316,6 +316,16 @@ export default function RazorpayCheckoutModal({
           <p className="checkout-guarantee-note">
             🔒 Secure 256-bit payment via Razorpay · Instant link generation
           </p>
+
+          <div className="checkout-support-footer-note">
+            <span className="checkout-support-label">Payment done but not received the link?</span>
+            <a
+              href="mailto:magicmoments.work@gmail.com?subject=Payment%20Done%20-%20Celebration%20Link%20Request&body=Hi%20Magic%20Moments%20Team,%0A%0AI%20completed%20the%20payment%20for%20my%20birthday%20celebration%20page%20but%20haven't%20received%20my%20link%20yet.%0A%0APayment%20Details:%0A-%20Celebrant%20Name:%20%0A-%20Amount%20Paid:%20%0A-%20Phone%20or%20Email:%20%0A-%20Razorpay%20Payment%20ID%20/%20UPI%20Ref:%20%0A%0AThank%20you!"
+              className="checkout-support-email-link"
+            >
+              Contact: <strong>magicmoments.work@gmail.com</strong>
+            </a>
+          </div>
         </div>
       </div>
 
