@@ -852,7 +852,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
               <input
                 type="text"
                 className="analytics-search-input"
-                placeholder="Search drafts by name, email, or IP..."
+                placeholder="Search drafts by name or sender..."
                 value={abandonedSearchQuery}
                 onChange={(e) => setAbandonedSearchQuery(e.target.value)}
                 style={{ maxWidth: "300px" }}
@@ -873,10 +873,8 @@ export default function VisitorAnalyticsView({ adminToken }) {
                       <th>Celebrant &amp; Sender</th>
                       <th>Visits / Activity</th>
                       <th>Last Visited / Created</th>
-                      <th>User Email (if signed in)</th>
-                      <th>IP &amp; Device</th>
                       <th>Photos &amp; Reasons</th>
-                      <th>Action</th>
+                      <th style={{ whiteSpace: "nowrap" }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -980,29 +978,21 @@ export default function VisitorAnalyticsView({ adminToken }) {
                         </td>
 
                         <td>
-                          {t.userEmail ? (
-                            <span style={{ fontSize: "12px", color: "#2563eb", fontWeight: 600 }}>
-                              ✉️ {t.userEmail}
-                            </span>
-                          ) : (
-                            <span className="muted">Guest (Not logged in)</span>
-                          )}
-                        </td>
-
-                        <td>
-                          <div>
-                            <span className="analytics-ip-code" style={{ fontSize: "11px" }}>{t.clientIp || "Unknown"}</span>
-                          </div>
-                        </td>
-
-                        <td>
                           <div style={{ fontSize: "12px", color: "#54303b" }}>
                             <span>📸 {(t.gallery || []).length} gallery</span> • <span>✦ {(t.reasons || []).length} reasons</span>
                           </div>
                         </td>
 
                         <td>
-                          <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "row",
+                              gap: "6px",
+                              alignItems: "center",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
                             {t.isConverted ? (
                               <button
                                 type="button"
