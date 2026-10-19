@@ -49,6 +49,8 @@ const abandonedTemplateSchema = new mongoose.Schema(
     clientIp: { type: String, default: '' },
     userAgent: { type: String, default: '' },
     isConverted: { type: Boolean, default: false }, // true if user eventually paid
+    convertedSlug: { type: String, default: '' },
+    convertedAt: { type: Date, default: null },
     visitCount: { type: Number, default: 1 },
     lastVisitedAt: { type: Date, default: Date.now, index: true },
     creationHistory: { type: [creationHistorySchema], default: [] },

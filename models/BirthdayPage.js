@@ -15,6 +15,7 @@ const birthdayPageSchema = new mongoose.Schema({
   gallery: { type: [String], default: [] },
   galleryPublicIds: { type: [String], default: [] },
   isPaid: { type: Boolean, default: false },
+  convertedByAdmin: { type: Boolean, default: false },
   paymentId: { type: String, default: '' },
   orderId: { type: String, default: '' },
   amountPaid: { type: Number, default: 0 },

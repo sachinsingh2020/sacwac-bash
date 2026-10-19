@@ -34,6 +34,10 @@ export default function VisitorAnalyticsView({ adminToken }) {
   const [loadingAbandoned, setLoadingAbandoned] = useState(true);
   const [previewingTemplate, setPreviewingTemplate] = useState(null);
   const [historyModalTemplate, setHistoryModalTemplate] = useState(null);
+  const [convertModalTemplate, setConvertModalTemplate] = useState(null);
+  const [isConverting, setIsConverting] = useState(false);
+  const [convertError, setConvertError] = useState("");
+  const [copiedLiveSlug, setCopiedLiveSlug] = useState("");
 
   // Logged-in users state
   const [usersList, setUsersList] = useState([]);
@@ -306,6 +310,90 @@ export default function VisitorAnalyticsView({ adminToken }) {
       alert(err.message || `Failed to send ₹${price} offer email.`);
     } finally {
       setSendingOffer((prev) => ({ ...prev, [key]: false }));
+    }
+  };
+
+  const handleCopyLiveLink = (slug) => {
+    if (typeof window === "undefined" || !slug) return;
+    const fullUrl = `${window.location.origin}/${slug}`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(fullUrl).then(() => {
+        setCopiedLiveSlug(slug);
+        setTimeout(() => setCopiedLiveSlug(""), 2200);
+      });
+    }
+  };
+
+  const handleConfirmConvert = async () => {
+    if (!convertModalTemplate) return;
+    setIsConverting(true);
+    setConvertError("");
+
+    try {
+      const headers = { "Content-Type": "application/json" };
+      if (adminToken) headers["x-admin-token"] = adminToken;
+
+      const res = await fetch("/api/admin/convert-template", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          templateId: convertModalTemplate.templateId || convertModalTemplate._id,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "Failed to convert template.");
+      }
+
+      // Optimistically update abandoned template state
+      setAbandonedTemplates((prev) =>
+        prev.map((t) =>
+          (t._id === convertModalTemplate._id || t.templateId === convertModalTemplate.templateId)
+            ? { ...t, isConverted: true, convertedSlug: json.slug }
+            : t
+        )
+      );
+
+      // Prepend to paidBuyers
+      if (json.page || json.slug) {
+        const pageData = json.page || {};
+        const newBuyer = {
+          id: pageData._id || json.slug,
+          _id: pageData._id || json.slug,
+          slug: json.slug,
+          name: pageData.name || convertModalTemplate.name,
+          nickname: pageData.nickname || convertModalTemplate.nickname || "",
+          dob: pageData.dob || convertModalTemplate.dob || "",
+          age: pageData.age || convertModalTemplate.age || "",
+          date: pageData.date || convertModalTemplate.date || "",
+          photo: pageData.photo || convertModalTemplate.photo || "",
+          paymentId: "admin_converted",
+          orderId: "admin_manual",
+          convertedByAdmin: true,
+          amountPaid: 0,
+          userEmail: pageData.userEmail || convertModalTemplate.userEmail || "",
+          createdAt: pageData.createdAt || new Date().toISOString(),
+          totalVisits: 0,
+          uniqueVisitors: 0,
+          lastVisit: null,
+        };
+
+        setData((prev) => ({
+          ...prev,
+          paidBuyers: [newBuyer, ...(prev.paidBuyers || [])],
+          paidBuyersCount: (prev.paidBuyersCount || 0) + 1,
+        }));
+      }
+
+      setConvertModalTemplate(null);
+      handleCopyLiveLink(json.slug);
+      alert(`🎉 Successfully converted! Live link: /${json.slug}\nLink copied to clipboard.`);
+    } catch (err) {
+      console.error("Conversion error:", err);
+      setConvertError(err.message || "Failed to convert template.");
+    } finally {
+      setIsConverting(false);
     }
   };
 
@@ -683,71 +771,96 @@ export default function VisitorAnalyticsView({ adminToken }) {
                             </td>
 
                             <td>
-                              <div>
-                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              {b.convertedByAdmin || b.paymentId === "admin_converted" ? (
+                                <div>
                                   <span
                                     style={{
+                                      display: "inline-block",
                                       fontWeight: 800,
-                                      color:
-                                        b.amountPaid === 29
-                                          ? "#dc2626"
-                                          : b.amountPaid === 39
-                                          ? "#be185d"
-                                          : b.amountPaid === 49
-                                          ? "#d95775"
-                                          : "#16a34a",
-                                      fontSize: "14px",
+                                      fontSize: "12px",
+                                      padding: "3px 10px",
+                                      borderRadius: "999px",
+                                      background: "#ecfdf5",
+                                      color: "#047857",
+                                      border: "1px solid #a7f3d0",
+                                      letterSpacing: "0.2px",
                                     }}
                                   >
-                                    ₹{b.amountPaid !== undefined && b.amountPaid !== null ? b.amountPaid : 199}
+                                    🪄 Converted
                                   </span>
-                                  <span
-                                    style={{
-                                      fontSize: "10px",
-                                      fontWeight: 700,
-                                      padding: "2px 6px",
-                                      borderRadius: "6px",
-                                      background:
-                                        b.amountPaid === 29
-                                          ? "#fee2e2"
-                                          : b.amountPaid === 39
-                                          ? "#fce7f3"
-                                          : b.amountPaid === 49
-                                          ? "#fff0f3"
-                                          : "#f0fdf4",
-                                      color:
-                                        b.amountPaid === 29
-                                          ? "#b91c1c"
-                                          : b.amountPaid === 39
-                                          ? "#be185d"
-                                          : b.amountPaid === 49
-                                          ? "#d95775"
-                                          : "#166534",
-                                      border:
-                                        b.amountPaid === 29
-                                          ? "1px solid #fca5a5"
-                                          : b.amountPaid === 39
-                                          ? "1px solid #fbcfe8"
-                                          : b.amountPaid === 49
-                                          ? "1px solid #ffd6e1"
-                                          : "1px solid #bbf7d0",
-                                    }}
-                                  >
-                                    {b.amountPaid === 29
-                                      ? "Final Offer (₹29)"
-                                      : b.amountPaid === 39
-                                      ? "Special Offer (₹39)"
-                                      : b.amountPaid === 49
-                                      ? "Login (₹49)"
-                                      : "Standard (₹199)"}
-                                  </span>
+                                  <div style={{ marginTop: "4px" }}>
+                                    <span className="analytics-ip-code" style={{ fontSize: "11px", color: "#64748b" }}>
+                                      Admin Manual
+                                    </span>
+                                  </div>
                                 </div>
-                                <div style={{ marginTop: "4px" }}>
-                                  <span className="analytics-ip-code" style={{ fontSize: "11px" }}>
-                                    {b.paymentId || "N/A"}
-                                  </span>
+                              ) : (
+                                <div>
+                                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <span
+                                      style={{
+                                        fontWeight: 800,
+                                        color:
+                                          b.amountPaid === 29
+                                            ? "#dc2626"
+                                            : b.amountPaid === 39
+                                            ? "#be185d"
+                                            : b.amountPaid === 49
+                                            ? "#d95775"
+                                            : "#16a34a",
+                                        fontSize: "14px",
+                                      }}
+                                    >
+                                      ₹{b.amountPaid !== undefined && b.amountPaid !== null ? b.amountPaid : 199}
+                                    </span>
+                                    <span
+                                      style={{
+                                        fontSize: "10px",
+                                        fontWeight: 700,
+                                        padding: "2px 6px",
+                                        borderRadius: "6px",
+                                        background:
+                                          b.amountPaid === 29
+                                            ? "#fee2e2"
+                                            : b.amountPaid === 39
+                                            ? "#fce7f3"
+                                            : b.amountPaid === 49
+                                            ? "#fff0f3"
+                                            : "#f0fdf4",
+                                        color:
+                                          b.amountPaid === 29
+                                            ? "#b91c1c"
+                                            : b.amountPaid === 39
+                                            ? "#be185d"
+                                            : b.amountPaid === 49
+                                            ? "#d95775"
+                                            : "#166534",
+                                        border:
+                                          b.amountPaid === 29
+                                            ? "1px solid #fca5a5"
+                                            : b.amountPaid === 39
+                                            ? "1px solid #fbcfe8"
+                                            : b.amountPaid === 49
+                                            ? "1px solid #ffd6e1"
+                                            : "1px solid #bbf7d0",
+                                      }}
+                                    >
+                                      {b.amountPaid === 29
+                                        ? "Final Offer (₹29)"
+                                        : b.amountPaid === 39
+                                        ? "Special Offer (₹39)"
+                                        : b.amountPaid === 49
+                                        ? "Login (₹49)"
+                                        : "Standard (₹199)"}
+                                    </span>
+                                  </div>
+                                  <div style={{ marginTop: "4px" }}>
+                                    <span className="analytics-ip-code" style={{ fontSize: "11px" }}>
+                                      {b.paymentId || "N/A"}
+                                    </span>
+                                  </div>
                                 </div>
-                              </div>
+                              )}
                             </td>
 
                             <td>
@@ -768,7 +881,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
                             </td>
 
                             <td>
-                              <div style={{ display: "flex", gap: "6px" }}>
+                              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
                                 <a
                                   href={`/${b.slug}`}
                                   target="_blank"
@@ -778,6 +891,20 @@ export default function VisitorAnalyticsView({ adminToken }) {
                                 >
                                   View Live
                                 </a>
+                                <button
+                                  type="button"
+                                  className="analytics-view-btn"
+                                  onClick={() => handleCopyLiveLink(b.slug)}
+                                  style={{
+                                    background: copiedLiveSlug === b.slug ? "#dcfce7" : "#ffffff",
+                                    color: copiedLiveSlug === b.slug ? "#15803d" : "#475569",
+                                    borderColor: copiedLiveSlug === b.slug ? "#86efac" : "#cbd5e1",
+                                    fontWeight: 700,
+                                  }}
+                                  title="Copy live celebration link to clipboard"
+                                >
+                                  {copiedLiveSlug === b.slug ? "✓ Copied!" : "📋 Copy Link"}
+                                </button>
                                 <button
                                   type="button"
                                   className="analytics-view-btn"
@@ -1010,7 +1137,34 @@ export default function VisitorAnalyticsView({ adminToken }) {
                         </td>
 
                         <td>
-                          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                          <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+                            {t.isConverted ? (
+                              <button
+                                type="button"
+                                className="analytics-view-btn"
+                                onClick={() => handleCopyLiveLink(t.convertedSlug)}
+                                style={{ background: "#ecfdf5", color: "#047857", borderColor: "#a7f3d0", fontWeight: 700 }}
+                                title="This template has already been converted to a live celebration link"
+                              >
+                                {copiedLiveSlug === t.convertedSlug ? "✓ Copied!" : "✓ Converted"}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="analytics-view-btn"
+                                onClick={() => setConvertModalTemplate(t)}
+                                style={{
+                                  background: "linear-gradient(135deg, #10b981, #059669)",
+                                  color: "#ffffff",
+                                  borderColor: "#059669",
+                                  fontWeight: 700,
+                                  boxShadow: "0 2px 4px rgba(16, 185, 129, 0.2)",
+                                }}
+                                title="Convert this template into a live celebration link without payment"
+                              >
+                                🪄 Convert
+                              </button>
+                            )}
                             <button
                               type="button"
                               className="analytics-view-btn"
@@ -1251,6 +1405,35 @@ export default function VisitorAnalyticsView({ adminToken }) {
                                 ? "Sending..."
                                 : sentOffers[`${t.templateId || t._id}_29`] || "🔥 Send ₹29 Offer"}
                             </button>
+
+                            {/* Convert button */}
+                            {t.isConverted ? (
+                              <button
+                                type="button"
+                                className="analytics-view-btn"
+                                onClick={() => handleCopyLiveLink(t.convertedSlug)}
+                                style={{ background: "#ecfdf5", color: "#047857", borderColor: "#a7f3d0", fontWeight: 700 }}
+                                title="This template has already been converted to a live celebration link"
+                              >
+                                {copiedLiveSlug === t.convertedSlug ? "✓ Copied!" : "✓ Converted"}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="analytics-view-btn"
+                                onClick={() => setConvertModalTemplate(t)}
+                                style={{
+                                  background: "linear-gradient(135deg, #10b981, #059669)",
+                                  color: "#ffffff",
+                                  borderColor: "#059669",
+                                  fontWeight: 700,
+                                  boxShadow: "0 2px 4px rgba(16, 185, 129, 0.2)",
+                                }}
+                                title="Convert this template into a live celebration link without payment"
+                              >
+                                🪄 Convert
+                              </button>
+                            )}
 
                             <button
                               type="button"
@@ -2155,6 +2338,191 @@ export default function VisitorAnalyticsView({ adminToken }) {
                 disabled={isDeleting}
               >
                 {isDeleting ? "Deleting..." : "🗑️ Delete Permanently"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* CONVERT TEMPLATE CONFIRMATION MODAL                            */}
+      {/* ============================================================== */}
+      {convertModalTemplate && (
+        <div
+          className="analytics-modal-backdrop"
+          onClick={() => !isConverting && setConvertModalTemplate(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="analytics-modal"
+            style={{ maxWidth: "480px" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="analytics-modal-header" style={{ borderBottom: "1px solid #f1f5f9" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "50%",
+                    background: "#ecfdf5",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "20px",
+                  }}
+                >
+                  🪄
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: "#0f172a" }}>
+                    Convert Template to Live Link
+                  </h3>
+                  <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>
+                    Create live celebration page without payment
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="analytics-modal-close-btn"
+                onClick={() => !isConverting && setConvertModalTemplate(null)}
+                disabled={isConverting}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="analytics-modal-body" style={{ padding: "20px" }}>
+              <p style={{ margin: "0 0 16px 0", fontSize: "15px", color: "#1e293b", fontWeight: 600, lineHeight: 1.5 }}>
+                Are you sure you want to convert this template into link?
+              </p>
+
+              <div
+                style={{
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "10px",
+                  padding: "14px 16px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "14px",
+                }}
+              >
+                {convertModalTemplate.photo ? (
+                  <img
+                    src={convertModalTemplate.photo}
+                    alt={convertModalTemplate.name}
+                    style={{
+                      width: "48px",
+                      height: "48px",
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                      border: "2px solid #e2e8f0",
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: "48px",
+                      height: "48px",
+                      borderRadius: "50%",
+                      background: "#fee2e2",
+                      color: "#dc2626",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontWeight: 800,
+                      fontSize: "18px",
+                    }}
+                  >
+                    {convertModalTemplate.name ? convertModalTemplate.name[0].toUpperCase() : "🎂"}
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h4 style={{ margin: "0 0 4px 0", fontSize: "15px", fontWeight: 800, color: "#0f172a" }}>
+                    {convertModalTemplate.name}
+                    {convertModalTemplate.nickname ? ` (${convertModalTemplate.nickname})` : ""}
+                  </h4>
+                  <div style={{ fontSize: "12px", color: "#64748b" }}>
+                    {convertModalTemplate.userEmail ? (
+                      <span style={{ color: "#2563eb", fontWeight: 600 }}>✉️ {convertModalTemplate.userEmail}</span>
+                    ) : (
+                      <span>Guest User</span>
+                    )}
+                    {(convertModalTemplate.date || convertModalTemplate.dob) && (
+                      <span> • 📅 {convertModalTemplate.date || convertModalTemplate.dob}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {convertError && (
+                <div
+                  style={{
+                    marginTop: "14px",
+                    padding: "10px 12px",
+                    background: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    borderRadius: "8px",
+                    color: "#dc2626",
+                    fontSize: "12.5px",
+                    fontWeight: 600,
+                  }}
+                >
+                  ⚠️ {convertError}
+                </div>
+              )}
+            </div>
+
+            <div
+              className="analytics-modal-footer"
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "10px",
+                padding: "14px 20px",
+                borderTop: "1px solid #f1f5f9",
+              }}
+            >
+              <button
+                type="button"
+                className="analytics-modal-footer-btn"
+                onClick={() => setConvertModalTemplate(null)}
+                disabled={isConverting}
+                style={{
+                  background: "#f1f5f9",
+                  color: "#475569",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "8px",
+                  padding: "8px 16px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="analytics-modal-footer-btn"
+                onClick={handleConfirmConvert}
+                disabled={isConverting}
+                style={{
+                  background: "linear-gradient(135deg, #10b981, #059669)",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "8px 18px",
+                  fontWeight: 700,
+                  cursor: isConverting ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  boxShadow: "0 2px 4px rgba(16, 185, 129, 0.25)",
+                }}
+              >
+                {isConverting ? "Converting..." : "Yes, Convert to Link ✨"}
               </button>
             </div>
           </div>
