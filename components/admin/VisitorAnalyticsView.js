@@ -44,9 +44,8 @@ export default function VisitorAnalyticsView({ adminToken }) {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [userSearchQuery, setUserSearchQuery] = useState("");
 
-  // Search queries for abandoned tabs
+  // Search query for abandoned tab
   const [abandonedSearchQuery, setAbandonedSearchQuery] = useState("");
-  const [loggedInAbandonedSearchQuery, setLoggedInAbandonedSearchQuery] = useState("");
 
   // Permanent deletion warning modal state
   const [deleteModalItem, setDeleteModalItem] = useState(null);
@@ -56,10 +55,6 @@ export default function VisitorAnalyticsView({ adminToken }) {
   // 1-month reminder check state
   const [runningReminderCheck, setRunningReminderCheck] = useState(false);
   const [reminderResult, setReminderResult] = useState(null);
-
-  // Email offer sending state for high-intent abandoned leads
-  const [sendingOffer, setSendingOffer] = useState({});
-  const [sentOffers, setSentOffers] = useState({});
 
   const fetchAnalytics = useCallback(async () => {
     setLoading(true);
@@ -257,61 +252,6 @@ export default function VisitorAnalyticsView({ adminToken }) {
       (t.clientIp && t.clientIp.toLowerCase().includes(q))
     );
   }, [abandonedTemplates, abandonedSearchQuery]);
-
-  // Filter logged-in abandoned templates and sort by lastVisitedAt
-  const loggedInAbandoned = useMemo(() => {
-    const list = abandonedTemplates
-      .filter((t) => t.userEmail && t.userEmail.trim())
-      .sort(sortAbandonedByLastVisited);
-    if (!loggedInAbandonedSearchQuery.trim()) return list;
-    const q = loggedInAbandonedSearchQuery.toLowerCase();
-    return list.filter((t) =>
-      (t.name && t.name.toLowerCase().includes(q)) ||
-      (t.nickname && t.nickname.toLowerCase().includes(q)) ||
-      (t.sender && t.sender.toLowerCase().includes(q)) ||
-      (t.userEmail && t.userEmail.toLowerCase().includes(q)) ||
-      (t.clientIp && t.clientIp.toLowerCase().includes(q))
-    );
-  }, [abandonedTemplates, loggedInAbandonedSearchQuery]);
-
-  const handleSendOffer = async (template, price) => {
-    const key = `${template.templateId || template._id}_${price}`;
-    if (!template.userEmail) {
-      alert("No email address found for this user.");
-      return;
-    }
-    setSendingOffer((prev) => ({ ...prev, [key]: true }));
-
-    try {
-      const headers = { "Content-Type": "application/json" };
-      if (adminToken) headers["x-admin-token"] = adminToken;
-
-      const res = await fetch("/api/admin/send-offer", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          templateId: template.templateId,
-          price,
-          email: template.userEmail,
-        }),
-      });
-
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.error || `Failed to send ₹${price} offer email.`);
-      }
-
-      setSentOffers((prev) => ({
-        ...prev,
-        [key]: `✓ ₹${price} Sent!`,
-      }));
-    } catch (err) {
-      console.error(`Error sending ₹${price} offer:`, err);
-      alert(err.message || `Failed to send ₹${price} offer email.`);
-    } finally {
-      setSendingOffer((prev) => ({ ...prev, [key]: false }));
-    }
-  };
 
   const handleCopyLiveLink = (slug) => {
     if (typeof window === "undefined" || !slug) return;
@@ -546,18 +486,6 @@ export default function VisitorAnalyticsView({ adminToken }) {
 
         <button
           type="button"
-          className={`analytics-view-tab-btn ${activeMainTab === "abandoned_loggedin" ? "active" : ""}`}
-          onClick={() => setActiveMainTab("abandoned_loggedin")}
-        >
-          <span>✉️</span>
-          <span>Created &amp; Logged In (Didn&apos;t Buy)</span>
-          <span className="analytics-tab-pill-badge" style={{ background: "#eff6ff", color: "#2563eb" }}>
-            {loadingAbandoned ? "..." : abandonedTemplates.filter((t) => t.userEmail && t.userEmail.trim()).length}
-          </span>
-        </button>
-
-        <button
-          type="button"
           className={`analytics-view-tab-btn ${activeMainTab === "users" ? "active" : ""}`}
           onClick={() => setActiveMainTab("users")}
         >
@@ -721,8 +649,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
                           <th>Shareable Link</th>
                           <th>Amount &amp; Payment ID</th>
                           <th>Birthday Date</th>
-                          <th>Traffic to Link</th>
-                          <th>Actions</th>
+                          <th style={{ whiteSpace: "nowrap" }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -870,18 +797,15 @@ export default function VisitorAnalyticsView({ adminToken }) {
                             </td>
 
                             <td>
-                              <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                                <span className="badge-num" style={{ background: "#fef0f3", color: "#d95775" }}>
-                                  {b.totalVisits || 0} views
-                                </span>
-                                <span style={{ fontSize: "11px", color: "#8a6e76" }}>
-                                  ({b.uniqueVisitors || 0} unique)
-                                </span>
-                              </div>
-                            </td>
-
-                            <td>
-                              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "row",
+                                  alignItems: "center",
+                                  gap: "6px",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
                                 <a
                                   href={`/${b.slug}`}
                                   target="_blank"
@@ -891,20 +815,6 @@ export default function VisitorAnalyticsView({ adminToken }) {
                                 >
                                   View Live
                                 </a>
-                                <button
-                                  type="button"
-                                  className="analytics-view-btn"
-                                  onClick={() => handleCopyLiveLink(b.slug)}
-                                  style={{
-                                    background: copiedLiveSlug === b.slug ? "#dcfce7" : "#ffffff",
-                                    color: copiedLiveSlug === b.slug ? "#15803d" : "#475569",
-                                    borderColor: copiedLiveSlug === b.slug ? "#86efac" : "#cbd5e1",
-                                    fontWeight: 700,
-                                  }}
-                                  title="Copy live celebration link to clipboard"
-                                >
-                                  {copiedLiveSlug === b.slug ? "✓ Copied!" : "📋 Copy Link"}
-                                </button>
                                 <button
                                   type="button"
                                   className="analytics-view-btn"
@@ -1197,276 +1107,6 @@ export default function VisitorAnalyticsView({ adminToken }) {
                                   t._id,
                                   t.name,
                                   `Created: ${formatTimestamp(t.createdAt)}${t.userEmail ? " • User: " + t.userEmail : " • Guest"}`,
-                                  null,
-                                  true
-                                )
-                              }
-                              title="Permanently delete this draft template and its Cloudinary photos"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-          )}
-        </section>
-      )}
-
-      {/* ============================================================== */}
-      {/* TAB: CREATED TEMPLATE AND LOGGED IN BUT DIDN'T BUY             */}
-      {/* ============================================================== */}
-      {activeMainTab === "abandoned_loggedin" && (
-        <section className="abandoned-section" aria-label="People who created template and logged in but didn't buy">
-          <div className="buyers-header-card">
-            <div className="buyers-header-title">
-              <h3>
-                <span>✉️</span>
-                <span>Created &amp; Logged In (Didn&apos;t Buy)</span>
-              </h3>
-              <p>
-                Every visitor who signed into their account (Google or Email OTP), customized their birthday celebration with photos &amp; reasons, but abandoned checkout before completing the purchase.
-              </p>
-            </div>
-            <button
-              type="button"
-              className="analytics-refresh-btn"
-              onClick={fetchAbandonedTemplates}
-              disabled={loadingAbandoned}
-            >
-              {loadingAbandoned ? "Refreshing..." : "↻ Refresh List"}
-            </button>
-          </div>
-
-          {loadingAbandoned ? (
-            <div className="analytics-page-loader">
-              <div className="analytics-circle-spinner" />
-              <h3 className="analytics-loader-title">Loading High-Intent Logged-In Leads...</h3>
-              <p className="analytics-loader-sub">Fetching logged-in users with saved celebration drafts and emails</p>
-            </div>
-          ) : (
-            <div className="analytics-table-card">
-            <div className="analytics-table-head-row">
-              <h3 className="analytics-table-title">
-                <span>🎯 High-Intent Logged-In Leads ({loggedInAbandoned.length})</span>
-              </h3>
-              <input
-                type="text"
-                className="analytics-search-input"
-                placeholder="Search by name, email, or IP..."
-                value={loggedInAbandonedSearchQuery}
-                onChange={(e) => setLoggedInAbandonedSearchQuery(e.target.value)}
-                style={{ maxWidth: "300px" }}
-              />
-            </div>
-
-            {loggedInAbandoned.length === 0 ? (
-              <div className="analytics-empty">
-                <div className="analytics-empty-icon">✉️</div>
-                <strong>No logged-in abandoned templates found.</strong>
-                <p>When someone logs in, designs their celebration, and exits without paying, their draft and email will appear here.</p>
-              </div>
-            ) : (
-              <div className="analytics-table-wrap">
-                <table className="analytics-table">
-                  <thead>
-                    <tr>
-                      <th>Celebrant Details</th>
-                      <th>Logged-In User Email</th>
-                      <th>Created At</th>
-                      <th>IP &amp; Device</th>
-                      <th>Photos &amp; Reasons</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loggedInAbandoned.map((t) => {
-                      const visits = t.visitCount || (t.creationHistory && t.creationHistory.length) || 1;
-                      return (
-                      <tr key={t._id || t.templateId}>
-                        <td>
-                          <div className="buyer-profile-cell">
-                            {t.photo ? (
-                              <img src={t.photo} alt={t.name} className="buyer-thumb-avatar" />
-                            ) : (
-                              <div className="buyer-monogram-avatar">
-                                {t.name ? t.name[0].toUpperCase() : "🎂"}
-                              </div>
-                            )}
-                            <div>
-                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                                <strong>{t.name}</strong>
-                                {visits > 1 && (
-                                  <span
-                                    style={{
-                                      background: "linear-gradient(135deg, #fef2f2, #fee2e2)",
-                                      border: "1px solid #fecaca",
-                                      color: "#dc2626",
-                                      fontSize: "10.5px",
-                                      fontWeight: 800,
-                                      padding: "2px 7px",
-                                      borderRadius: "999px",
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: "3px",
-                                    }}
-                                    title={`This user visited and customized templates ${visits} times!`}
-                                  >
-                                    🔥 {visits} visits
-                                  </span>
-                                )}
-                              </div>
-                              {t.nickname && <span className="buyer-nickname">&ldquo;{t.nickname}&rdquo;</span>}
-                              {t.sender && (
-                                <span style={{ display: "block", fontSize: "11px", color: "#d95775", fontWeight: 700 }}>
-                                  💌 From: {t.sender}
-                                </span>
-                              )}
-                              <span style={{ display: "block", fontSize: "11px", color: "#8a6d77" }}>
-                                DOB: {t.date || t.dob || "N/A"} {t.age ? `(${t.age} yrs)` : ""}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td>
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span style={{ fontSize: "12.5px", color: "#2563eb", fontWeight: 700 }}>
-                              ✉️ {t.userEmail}
-                            </span>
-                            <button
-                              type="button"
-                              className="buyer-copy-btn"
-                              onClick={() => {
-                                if (navigator.clipboard?.writeText) {
-                                  navigator.clipboard.writeText(t.userEmail);
-                                }
-                              }}
-                              title="Copy Email Address"
-                            >
-                              Copy
-                            </button>
-                          </div>
-                        </td>
-
-                        <td>
-                          <span style={{ fontSize: "11.5px", color: "#6e4f59", whiteSpace: "nowrap", display: "block" }}>
-                            <strong>{formatTimestamp(t.lastVisitedAt || t.updatedAt || t.createdAt)}</strong>
-                          </span>
-                          {t.lastVisitedAt && t.createdAt && new Date(t.lastVisitedAt).getTime() - new Date(t.createdAt).getTime() > 60000 && (
-                            <span style={{ fontSize: "10.5px", color: "#9ca3af", display: "block" }}>
-                              First: {formatTimestamp(t.createdAt)}
-                            </span>
-                          )}
-                        </td>
-
-                        <td>
-                          <div>
-                            <span className="analytics-ip-code" style={{ fontSize: "11px" }}>{t.clientIp || "Unknown"}</span>
-                          </div>
-                        </td>
-
-                        <td>
-                          <div style={{ fontSize: "12px", color: "#54303b" }}>
-                            <span>📸 {(t.gallery || []).length} gallery</span> • <span>✦ {(t.reasons || []).length} reasons</span>
-                          </div>
-                        </td>
-
-                        <td>
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
-                            {/* Send ₹39 Offer button */}
-                            <button
-                              type="button"
-                              className="analytics-view-btn analytics-offer-btn-39"
-                              onClick={() => handleSendOffer(t, 39)}
-                              disabled={sendingOffer[`${t.templateId || t._id}_39`]}
-                              title="Send ₹39 Special Offer email to user"
-                            >
-                              {sendingOffer[`${t.templateId || t._id}_39`]
-                                ? "Sending..."
-                                : sentOffers[`${t.templateId || t._id}_39`] || "📧 Send ₹39 Offer"}
-                            </button>
-
-                            {/* Send ₹29 Offer button */}
-                            <button
-                              type="button"
-                              className="analytics-view-btn analytics-offer-btn-29"
-                              onClick={() => handleSendOffer(t, 29)}
-                              disabled={sendingOffer[`${t.templateId || t._id}_29`]}
-                              title="Send ₹29 Final Offer email to user"
-                            >
-                              {sendingOffer[`${t.templateId || t._id}_29`]
-                                ? "Sending..."
-                                : sentOffers[`${t.templateId || t._id}_29`] || "🔥 Send ₹29 Offer"}
-                            </button>
-
-                            {/* Convert button */}
-                            {t.isConverted ? (
-                              <button
-                                type="button"
-                                className="analytics-view-btn"
-                                onClick={() => handleCopyLiveLink(t.convertedSlug)}
-                                style={{ background: "#ecfdf5", color: "#047857", borderColor: "#a7f3d0", fontWeight: 700 }}
-                                title="This template has already been converted to a live celebration link"
-                              >
-                                {copiedLiveSlug === t.convertedSlug ? "✓ Copied!" : "✓ Converted"}
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                className="analytics-view-btn"
-                                onClick={() => setConvertModalTemplate(t)}
-                                style={{
-                                  background: "linear-gradient(135deg, #10b981, #059669)",
-                                  color: "#ffffff",
-                                  borderColor: "#059669",
-                                  fontWeight: 700,
-                                  boxShadow: "0 2px 4px rgba(16, 185, 129, 0.2)",
-                                }}
-                                title="Convert this template into a live celebration link without payment"
-                              >
-                                🪄 Convert
-                              </button>
-                            )}
-
-                            <button
-                              type="button"
-                              className="analytics-view-btn"
-                              onClick={() => setPreviewingTemplate(t)}
-                              style={{ background: "#d95775", color: "#fff", borderColor: "#d95775" }}
-                              title="Inspect full celebration preview"
-                            >
-                              👀 View
-                            </button>
-                            <button
-                              type="button"
-                              className="analytics-view-btn"
-                              onClick={() => setHistoryModalTemplate(t)}
-                              style={{
-                                background: visits > 1 ? "#eff6ff" : "#f8fafc",
-                                color: visits > 1 ? "#1d4ed8" : "#475569",
-                                borderColor: visits > 1 ? "#bfdbfe" : "#cbd5e1",
-                                fontWeight: 700,
-                              }}
-                              title="Check how many times this user came and created"
-                            >
-                              📜 History ({visits})
-                            </button>
-                            <button
-                              type="button"
-                              className="analytics-view-btn analytics-delete-action-btn"
-                              onClick={() =>
-                                promptDelete(
-                                  "abandoned",
-                                  t._id,
-                                  t.name,
-                                  `Logged in as: ${t.userEmail} • Created: ${formatTimestamp(t.createdAt)}`,
                                   null,
                                   true
                                 )
