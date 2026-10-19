@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import PaymentSupportModal from "./PaymentSupportModal";
 
 function loadRazorpayScript() {
   return new Promise((resolve) => {
@@ -31,6 +32,7 @@ export default function RazorpayCheckoutModal({
   const [showExitWarning, setShowExitWarning] = useState(false);
   const [animStep, setAnimStep] = useState(0); // 0: initial ₹199, 1: pen crossing out, 2: ₹49 revealed
   const [capturedPayment, setCapturedPayment] = useState(null);
+  const [showSupportModal, setShowSupportModal] = useState(false);
 
   // Trigger fast pen-crossing animation when modal opens
   useEffect(() => {
@@ -319,12 +321,14 @@ export default function RazorpayCheckoutModal({
 
           <div className="checkout-support-footer-note">
             <span className="checkout-support-label">Payment done but not received the link?</span>
-            <a
-              href="mailto:magicmoments.work@gmail.com?subject=Payment%20Done%20-%20Celebration%20Link%20Request&body=Hi%20Magic%20Moments%20Team,%0A%0AI%20completed%20the%20payment%20for%20my%20birthday%20celebration%20page%20but%20haven't%20received%20my%20link%20yet.%0A%0APayment%20Details:%0A-%20Celebrant%20Name:%20%0A-%20Amount%20Paid:%20%0A-%20Phone%20or%20Email:%20%0A-%20Razorpay%20Payment%20ID%20/%20UPI%20Ref:%20%0A%0AThank%20you!"
+            <button
+              type="button"
+              onClick={() => setShowSupportModal(true)}
               className="checkout-support-email-link"
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
             >
               Contact: <strong>magicmoments.work@gmail.com</strong>
-            </a>
+            </button>
           </div>
         </div>
       </div>
@@ -360,6 +364,12 @@ export default function RazorpayCheckoutModal({
           </div>
         </div>
       )}
+
+      {/* Payment Support Modal */}
+      <PaymentSupportModal
+        isOpen={showSupportModal}
+        onClose={() => setShowSupportModal(false)}
+      />
     </>
   );
 }
