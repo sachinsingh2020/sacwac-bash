@@ -30,6 +30,7 @@ export default function RazorpayCheckoutModal({
   const [errorMsg, setErrorMsg] = useState("");
   const [showExitWarning, setShowExitWarning] = useState(false);
   const [animStep, setAnimStep] = useState(0); // 0: initial ₹199, 1: pen crossing out, 2: ₹49 revealed
+  const [capturedPayment, setCapturedPayment] = useState(null);
 
   // Trigger fast pen-crossing animation when modal opens
   useEffect(() => {
@@ -37,6 +38,7 @@ export default function RazorpayCheckoutModal({
       setAnimStep(0);
       setShowExitWarning(false);
       setErrorMsg("");
+      setCapturedPayment(null);
       return;
     }
 
@@ -73,8 +75,6 @@ export default function RazorpayCheckoutModal({
   if (!isOpen) return null;
 
   const personName = pagePayload?.name?.trim() || "Their";
-
-  const [capturedPayment, setCapturedPayment] = useState(null);
 
   const verifyPayment = async (paymentDetails) => {
     try {
