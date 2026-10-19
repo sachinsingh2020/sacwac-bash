@@ -32,6 +32,7 @@ function cleanPayload(body = {}) {
 
 export async function POST(request) {
   try {
+    const body = await request.json().catch(() => ({}));
     const {
       razorpay_order_id,
       razorpay_payment_id,
@@ -39,7 +40,8 @@ export async function POST(request) {
       pagePayload,
       templateId,
       tier,
-    } = await request.json();
+      userEmail: explicitUserEmail,
+    } = body;
 
     const key_secret = (process.env.RAZORPAY_KEY_SECRET || '').trim();
     const key_id = (process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || '').trim();
@@ -48,15 +50,24 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Razorpay secret not configured' }, { status: 500 });
     }
 
+    if (!razorpay_payment_id || !razorpay_order_id) {
+      return NextResponse.json(
+        { error: 'Missing payment verification credentials.' },
+        { status: 400 }
+      );
+    }
+
     // 1. Verify cryptographic HMAC SHA256 signature
     let isSignatureValid = false;
-    try {
-      const hmac = crypto.createHmac('sha256', key_secret);
-      hmac.update(`${razorpay_order_id}|${razorpay_payment_id}`);
-      const generatedSignature = hmac.digest('hex');
-      isSignatureValid = generatedSignature === razorpay_signature;
-    } catch (hmacErr) {
-      console.warn('HMAC calculation error:', hmacErr);
+    if (razorpay_signature) {
+      try {
+        const hmac = crypto.createHmac('sha256', key_secret);
+        hmac.update(`${razorpay_order_id}|${razorpay_payment_id}`);
+        const generatedSignature = hmac.digest('hex');
+        isSignatureValid = generatedSignature === razorpay_signature;
+      } catch (hmacErr) {
+        console.warn('HMAC calculation error:', hmacErr);
+      }
     }
 
     // 2. Query Razorpay API directly to get the verified payment amount and status
@@ -90,9 +101,43 @@ export async function POST(request) {
       );
     }
 
-    // Payment signature verified! Now save celebration page to MongoDB
+    // Payment signature verified! Connect to database
     await connectToDatabase();
-    const data = cleanPayload(pagePayload);
+
+    // Check if celebration page was already created for this paymentId (idempotency)
+    const existingPage = await BirthdayPage.findOne({ paymentId: razorpay_payment_id });
+    if (existingPage) {
+      if (templateId) {
+        try {
+          await AbandonedTemplate.updateOne(
+            { templateId },
+            { isConverted: true, userEmail: existingPage.userEmail || undefined }
+          );
+        } catch (err) {
+          console.warn('Failed to mark template as converted:', err.message);
+        }
+      }
+      return NextResponse.json({
+        success: true,
+        slug: existingPage.slug,
+        id: existingPage.slug,
+      });
+    }
+
+    // If pagePayload is missing or incomplete, fall back to AbandonedTemplate
+    let effectivePayload = pagePayload;
+    if ((!effectivePayload || !effectivePayload.name) && templateId) {
+      try {
+        const draft = await AbandonedTemplate.findOne({ templateId });
+        if (draft) {
+          effectivePayload = draft.formData || draft.toObject();
+        }
+      } catch (draftErr) {
+        console.warn('Fallback draft lookup error:', draftErr.message);
+      }
+    }
+
+    const data = cleanPayload(effectivePayload);
 
     // Get current logged in user from cookie/token if available
     let userEmail = '';
@@ -106,7 +151,12 @@ export async function POST(request) {
       }
     }
     if (!userEmail) {
-      userEmail = (body.userEmail || (pagePayload && pagePayload.userEmail) || '').trim();
+      userEmail = (
+        explicitUserEmail ||
+        body.userEmail ||
+        (effectivePayload && effectivePayload.userEmail) ||
+        ''
+      ).trim();
     }
 
     const baseSlug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '') || 'birthday';

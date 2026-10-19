@@ -74,7 +74,57 @@ export default function RazorpayCheckoutModal({
 
   const personName = pagePayload?.name?.trim() || "Their";
 
+  const [capturedPayment, setCapturedPayment] = useState(null);
+
+  const verifyPayment = async (paymentDetails) => {
+    try {
+      setLoading(true);
+      setErrorMsg("");
+
+      const verifyRes = await fetch("/api/razorpay/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          razorpay_order_id: paymentDetails.razorpay_order_id,
+          razorpay_payment_id: paymentDetails.razorpay_payment_id,
+          razorpay_signature: paymentDetails.razorpay_signature,
+          pagePayload,
+          templateId,
+          tier: "login",
+        }),
+      });
+
+      const verifyData = await verifyRes.json();
+      if (!verifyRes.ok || !verifyData.slug) {
+        throw new Error(verifyData.error || "Payment verification failed.");
+      }
+
+      // Track Purchase in Meta Pixel
+      if (typeof window !== "undefined" && typeof window.fbq === "function") {
+        try {
+          window.fbq("track", "Purchase", {
+            value: 49,
+            currency: "INR",
+            content_name: `Celebration Page: ${verifyData.slug}`,
+          });
+        } catch (e) {}
+      }
+
+      onPaymentSuccess({ slug: verifyData.slug });
+    } catch (err) {
+      console.error("Verification error:", err);
+      setErrorMsg(err.message || "Payment received but link generation encountered an issue. Tap below to retry generating your link.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleInitiatePayment = async () => {
+    // If payment was already completed on Razorpay, avoid opening payment popup again
+    if (capturedPayment) {
+      return verifyPayment(capturedPayment);
+    }
+
     setErrorMsg("");
     setLoading(true);
 
@@ -122,43 +172,8 @@ export default function RazorpayCheckoutModal({
           color: "#d95775",
         },
         handler: async function (response) {
-          try {
-            setLoading(true);
-            const verifyRes = await fetch("/api/razorpay/verify", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                pagePayload,
-                templateId,
-                tier: "login",
-              }),
-            });
-
-            const verifyData = await verifyRes.json();
-            if (!verifyRes.ok || !verifyData.slug) {
-              throw new Error(verifyData.error || "Payment verification failed.");
-            }
-
-            // Track Purchase in Meta Pixel
-            if (typeof window !== "undefined" && typeof window.fbq === "function") {
-              try {
-                window.fbq("track", "Purchase", {
-                  value: 49,
-                  currency: "INR",
-                  content_name: `Celebration Page: ${verifyData.slug}`,
-                });
-              } catch (e) {}
-            }
-
-            onPaymentSuccess({ slug: verifyData.slug });
-          } catch (err) {
-            console.error("Verification error:", err);
-            setErrorMsg(err.message || "Payment completed but verification failed. Please contact support.");
-            setLoading(false);
-          }
+          setCapturedPayment(response);
+          await verifyPayment(response);
         },
         modal: {
           ondismiss: function () {
@@ -283,7 +298,12 @@ export default function RazorpayCheckoutModal({
             {loading ? (
               <>
                 <span className="spinner-mini" />
-                <span>Connecting Razorpay... ✨</span>
+                <span>{capturedPayment ? "Generating Your Link... 🎂" : "Connecting Razorpay... ✨"}</span>
+              </>
+            ) : capturedPayment ? (
+              <>
+                <span>Generate Shareable Link</span>
+                <span className="checkout-btn-arrow">→</span>
               </>
             ) : (
               <>
