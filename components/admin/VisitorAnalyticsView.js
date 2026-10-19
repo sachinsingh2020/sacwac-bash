@@ -33,6 +33,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
   const [abandonedTemplates, setAbandonedTemplates] = useState([]);
   const [loadingAbandoned, setLoadingAbandoned] = useState(true);
   const [previewingTemplate, setPreviewingTemplate] = useState(null);
+  const [historyModalTemplate, setHistoryModalTemplate] = useState(null);
 
   // Logged-in users state
   const [usersList, setUsersList] = useState([]);
@@ -207,26 +208,63 @@ export default function VisitorAnalyticsView({ adminToken }) {
     );
   }, [usersList, userSearchQuery]);
 
-  // Filter abandoned templates by search
+  // Helper to sort abandoned templates by lastVisitedAt (descending) so active returning visitors are on top
+  const sortAbandonedByLastVisited = (a, b) => {
+    const timeA = new Date(a.lastVisitedAt || a.updatedAt || a.createdAt || 0).getTime();
+    const timeB = new Date(b.lastVisitedAt || b.updatedAt || b.createdAt || 0).getTime();
+    return timeB - timeA;
+  };
+
+  const getHistoryList = (t) => {
+    if (!t) return [];
+    if (Array.isArray(t.creationHistory) && t.creationHistory.length > 0) {
+      return [...t.creationHistory].reverse();
+    }
+    return [
+      {
+        templateId: t.templateId,
+        name: t.name,
+        nickname: t.nickname,
+        sender: t.sender,
+        dob: t.dob || t.date,
+        age: t.age,
+        date: t.date || t.dob,
+        message: t.message,
+        photo: t.photo,
+        galleryCount: (t.gallery || []).length,
+        reasonsCount: (t.reasons || []).length,
+        createdAt: t.createdAt,
+        clientIp: t.clientIp,
+        userAgent: t.userAgent,
+      },
+    ];
+  };
+
+  // Filter abandoned templates by search and sort by lastVisitedAt
   const filteredAbandoned = useMemo(() => {
-    if (!abandonedSearchQuery.trim()) return abandonedTemplates;
+    const sorted = [...abandonedTemplates].sort(sortAbandonedByLastVisited);
+    if (!abandonedSearchQuery.trim()) return sorted;
     const q = abandonedSearchQuery.toLowerCase();
-    return abandonedTemplates.filter((t) =>
+    return sorted.filter((t) =>
       (t.name && t.name.toLowerCase().includes(q)) ||
       (t.nickname && t.nickname.toLowerCase().includes(q)) ||
+      (t.sender && t.sender.toLowerCase().includes(q)) ||
       (t.userEmail && t.userEmail.toLowerCase().includes(q)) ||
       (t.clientIp && t.clientIp.toLowerCase().includes(q))
     );
   }, [abandonedTemplates, abandonedSearchQuery]);
 
-  // Filter logged-in abandoned templates
+  // Filter logged-in abandoned templates and sort by lastVisitedAt
   const loggedInAbandoned = useMemo(() => {
-    const list = abandonedTemplates.filter((t) => t.userEmail && t.userEmail.trim());
+    const list = abandonedTemplates
+      .filter((t) => t.userEmail && t.userEmail.trim())
+      .sort(sortAbandonedByLastVisited);
     if (!loggedInAbandonedSearchQuery.trim()) return list;
     const q = loggedInAbandonedSearchQuery.toLowerCase();
     return list.filter((t) =>
       (t.name && t.name.toLowerCase().includes(q)) ||
       (t.nickname && t.nickname.toLowerCase().includes(q)) ||
+      (t.sender && t.sender.toLowerCase().includes(q)) ||
       (t.userEmail && t.userEmail.toLowerCase().includes(q)) ||
       (t.clientIp && t.clientIp.toLowerCase().includes(q))
     );
@@ -840,8 +878,9 @@ export default function VisitorAnalyticsView({ adminToken }) {
                 <table className="analytics-table">
                   <thead>
                     <tr>
-                      <th>Celebrant Details</th>
-                      <th>Created At</th>
+                      <th>Celebrant &amp; Sender</th>
+                      <th>Visits / Activity</th>
+                      <th>Last Visited / Created</th>
                       <th>User Email (if signed in)</th>
                       <th>IP &amp; Device</th>
                       <th>Photos &amp; Reasons</th>
@@ -849,7 +888,9 @@ export default function VisitorAnalyticsView({ adminToken }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredAbandoned.map((t) => (
+                    {filteredAbandoned.map((t) => {
+                      const visits = t.visitCount || (t.creationHistory && t.creationHistory.length) || 1;
+                      return (
                       <tr key={t._id || t.templateId}>
                         <td>
                           <div className="buyer-profile-cell">
@@ -861,8 +902,34 @@ export default function VisitorAnalyticsView({ adminToken }) {
                               </div>
                             )}
                             <div>
-                              <strong>{t.name}</strong>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                                <strong>{t.name}</strong>
+                                {visits > 1 && (
+                                  <span
+                                    style={{
+                                      background: "linear-gradient(135deg, #fef2f2, #fee2e2)",
+                                      border: "1px solid #fecaca",
+                                      color: "#dc2626",
+                                      fontSize: "10.5px",
+                                      fontWeight: 800,
+                                      padding: "2px 7px",
+                                      borderRadius: "999px",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "3px",
+                                    }}
+                                    title={`This user visited and customized templates ${visits} times!`}
+                                  >
+                                    🔥 {visits} visits
+                                  </span>
+                                )}
+                              </div>
                               {t.nickname && <span className="buyer-nickname">&ldquo;{t.nickname}&rdquo;</span>}
+                              {t.sender && (
+                                <span style={{ display: "block", fontSize: "11px", color: "#d95775", fontWeight: 700 }}>
+                                  💌 From: {t.sender}
+                                </span>
+                              )}
                               <span style={{ display: "block", fontSize: "11px", color: "#8a6d77" }}>
                                 DOB: {t.date || t.dob || "N/A"} {t.age ? `(${t.age} yrs)` : ""}
                               </span>
@@ -871,9 +938,53 @@ export default function VisitorAnalyticsView({ adminToken }) {
                         </td>
 
                         <td>
-                          <span style={{ fontSize: "11.5px", color: "#6e4f59", whiteSpace: "nowrap" }}>
-                            {formatTimestamp(t.createdAt)}
+                          <div>
+                            <span
+                              style={{
+                                display: "inline-block",
+                                padding: "3px 9px",
+                                borderRadius: "999px",
+                                fontSize: "12px",
+                                fontWeight: 700,
+                                background: visits > 1 ? "#fff1f2" : "#f8fafc",
+                                border: visits > 1 ? "1.5px solid #fecdd3" : "1px solid #e2e8f0",
+                                color: visits > 1 ? "#be123c" : "#64748b",
+                              }}
+                            >
+                              {visits > 1 ? `🎯 ${visits} Creations` : "1 Creation"}
+                            </span>
+                            {visits > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => setHistoryModalTemplate(t)}
+                                style={{
+                                  display: "block",
+                                  marginTop: "4px",
+                                  fontSize: "11px",
+                                  color: "#2563eb",
+                                  fontWeight: 600,
+                                  background: "none",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  padding: 0,
+                                  textDecoration: "underline",
+                                }}
+                              >
+                                View All {visits} Visits →
+                              </button>
+                            )}
+                          </div>
+                        </td>
+
+                        <td>
+                          <span style={{ fontSize: "11.5px", color: "#6e4f59", whiteSpace: "nowrap", display: "block" }}>
+                            <strong>{formatTimestamp(t.lastVisitedAt || t.updatedAt || t.createdAt)}</strong>
                           </span>
+                          {t.lastVisitedAt && t.createdAt && new Date(t.lastVisitedAt).getTime() - new Date(t.createdAt).getTime() > 60000 && (
+                            <span style={{ fontSize: "10.5px", color: "#9ca3af", display: "block" }}>
+                              First: {formatTimestamp(t.createdAt)}
+                            </span>
+                          )}
                         </td>
 
                         <td>
@@ -899,7 +1010,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
                         </td>
 
                         <td>
-                          <div style={{ display: "flex", gap: "6px" }}>
+                          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                             <button
                               type="button"
                               className="analytics-view-btn"
@@ -907,7 +1018,21 @@ export default function VisitorAnalyticsView({ adminToken }) {
                               style={{ background: "#d95775", color: "#fff", borderColor: "#d95775" }}
                               title="Inspect full celebration preview"
                             >
-                              👀 View Template
+                              👀 View
+                            </button>
+                            <button
+                              type="button"
+                              className="analytics-view-btn"
+                              onClick={() => setHistoryModalTemplate(t)}
+                              style={{
+                                background: visits > 1 ? "#eff6ff" : "#f8fafc",
+                                color: visits > 1 ? "#1d4ed8" : "#475569",
+                                borderColor: visits > 1 ? "#bfdbfe" : "#cbd5e1",
+                                fontWeight: 700,
+                              }}
+                              title="Check how many times this user came and created"
+                            >
+                              📜 History ({visits})
                             </button>
                             <button
                               type="button"
@@ -924,12 +1049,13 @@ export default function VisitorAnalyticsView({ adminToken }) {
                               }
                               title="Permanently delete this draft template and its Cloudinary photos"
                             >
-                              🗑️ Delete
+                              🗑️
                             </button>
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1006,7 +1132,9 @@ export default function VisitorAnalyticsView({ adminToken }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {loggedInAbandoned.map((t) => (
+                    {loggedInAbandoned.map((t) => {
+                      const visits = t.visitCount || (t.creationHistory && t.creationHistory.length) || 1;
+                      return (
                       <tr key={t._id || t.templateId}>
                         <td>
                           <div className="buyer-profile-cell">
@@ -1018,8 +1146,34 @@ export default function VisitorAnalyticsView({ adminToken }) {
                               </div>
                             )}
                             <div>
-                              <strong>{t.name}</strong>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                                <strong>{t.name}</strong>
+                                {visits > 1 && (
+                                  <span
+                                    style={{
+                                      background: "linear-gradient(135deg, #fef2f2, #fee2e2)",
+                                      border: "1px solid #fecaca",
+                                      color: "#dc2626",
+                                      fontSize: "10.5px",
+                                      fontWeight: 800,
+                                      padding: "2px 7px",
+                                      borderRadius: "999px",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "3px",
+                                    }}
+                                    title={`This user visited and customized templates ${visits} times!`}
+                                  >
+                                    🔥 {visits} visits
+                                  </span>
+                                )}
+                              </div>
                               {t.nickname && <span className="buyer-nickname">&ldquo;{t.nickname}&rdquo;</span>}
+                              {t.sender && (
+                                <span style={{ display: "block", fontSize: "11px", color: "#d95775", fontWeight: 700 }}>
+                                  💌 From: {t.sender}
+                                </span>
+                              )}
                               <span style={{ display: "block", fontSize: "11px", color: "#8a6d77" }}>
                                 DOB: {t.date || t.dob || "N/A"} {t.age ? `(${t.age} yrs)` : ""}
                               </span>
@@ -1048,9 +1202,14 @@ export default function VisitorAnalyticsView({ adminToken }) {
                         </td>
 
                         <td>
-                          <span style={{ fontSize: "11.5px", color: "#6e4f59", whiteSpace: "nowrap" }}>
-                            {formatTimestamp(t.createdAt)}
+                          <span style={{ fontSize: "11.5px", color: "#6e4f59", whiteSpace: "nowrap", display: "block" }}>
+                            <strong>{formatTimestamp(t.lastVisitedAt || t.updatedAt || t.createdAt)}</strong>
                           </span>
+                          {t.lastVisitedAt && t.createdAt && new Date(t.lastVisitedAt).getTime() - new Date(t.createdAt).getTime() > 60000 && (
+                            <span style={{ fontSize: "10.5px", color: "#9ca3af", display: "block" }}>
+                              First: {formatTimestamp(t.createdAt)}
+                            </span>
+                          )}
                         </td>
 
                         <td>
@@ -1100,7 +1259,21 @@ export default function VisitorAnalyticsView({ adminToken }) {
                               style={{ background: "#d95775", color: "#fff", borderColor: "#d95775" }}
                               title="Inspect full celebration preview"
                             >
-                              👀 View Template
+                              👀 View
+                            </button>
+                            <button
+                              type="button"
+                              className="analytics-view-btn"
+                              onClick={() => setHistoryModalTemplate(t)}
+                              style={{
+                                background: visits > 1 ? "#eff6ff" : "#f8fafc",
+                                color: visits > 1 ? "#1d4ed8" : "#475569",
+                                borderColor: visits > 1 ? "#bfdbfe" : "#cbd5e1",
+                                fontWeight: 700,
+                              }}
+                              title="Check how many times this user came and created"
+                            >
+                              📜 History ({visits})
                             </button>
                             <button
                               type="button"
@@ -1117,12 +1290,13 @@ export default function VisitorAnalyticsView({ adminToken }) {
                               }
                               title="Permanently delete this draft template and its Cloudinary photos"
                             >
-                              🗑️ Delete
+                              🗑️
                             </button>
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1565,6 +1739,242 @@ export default function VisitorAnalyticsView({ adminToken }) {
               }}
               onExitPreview={() => setPreviewingTemplate(null)}
             />
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* CREATION & VISIT HISTORY MODAL                                 */}
+      {/* ============================================================== */}
+      {historyModalTemplate && (
+        <div className="analytics-modal-backdrop" onClick={() => setHistoryModalTemplate(null)}>
+          <div
+            className="analytics-modal analytics-history-modal"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "820px", width: "95%" }}
+          >
+            <div className="analytics-modal-header" style={{ borderBottom: "1px solid #fed7e2" }}>
+              <div>
+                <h3 style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0, color: "#881337" }}>
+                  <span>📜</span>
+                  <span>Creation &amp; Visit History</span>
+                  <span
+                    style={{
+                      fontSize: "12px",
+                      padding: "3px 10px",
+                      borderRadius: "999px",
+                      background: "#fecdd3",
+                      color: "#9f1239",
+                      fontWeight: 800,
+                    }}
+                  >
+                    Visited &amp; Created {historyModalTemplate.visitCount || (historyModalTemplate.creationHistory?.length || 1)} Time(s)
+                  </span>
+                </h3>
+                <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#9f1239" }}>
+                  Track every time this visitor came to the site and customized a celebration template without purchasing.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="analytics-modal-close-btn"
+                onClick={() => setHistoryModalTemplate(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="analytics-modal-body" style={{ maxHeight: "72vh", overflowY: "auto", padding: "20px 24px" }}>
+              {/* User Identity Summary Bar */}
+              <div
+                style={{
+                  background: "linear-gradient(135deg, #fff5f7 0%, #fff1f2 100%)",
+                  border: "1.5px solid #fecdd3",
+                  borderRadius: "14px",
+                  padding: "14px 18px",
+                  marginBottom: "20px",
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                  gap: "12px",
+                  fontSize: "12px",
+                }}
+              >
+                <div>
+                  <span style={{ color: "#9f1239", fontWeight: 600, display: "block" }}>👤 Celebrant:</span>
+                  <strong style={{ fontSize: "14px", color: "#371b22" }}>{historyModalTemplate.name}</strong>
+                  {historyModalTemplate.nickname && <span style={{ color: "#881337" }}> ({historyModalTemplate.nickname})</span>}
+                </div>
+                <div>
+                  <span style={{ color: "#9f1239", fontWeight: 600, display: "block" }}>💌 Sender:</span>
+                  <strong style={{ fontSize: "13px", color: "#371b22" }}>{historyModalTemplate.sender || "Not specified"}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "#9f1239", fontWeight: 600, display: "block" }}>✉️ User Account:</span>
+                  <strong style={{ fontSize: "12.5px", color: historyModalTemplate.userEmail ? "#1d4ed8" : "#64748b" }}>
+                    {historyModalTemplate.userEmail || "Guest (Not logged in)"}
+                  </strong>
+                </div>
+                <div>
+                  <span style={{ color: "#9f1239", fontWeight: 600, display: "block" }}>🌐 IP Address:</span>
+                  <code style={{ fontSize: "11.5px", background: "#fff", padding: "2px 6px", borderRadius: "4px", border: "1px solid #e2e8f0" }}>
+                    {historyModalTemplate.clientIp || "Unknown"}
+                  </code>
+                </div>
+                <div>
+                  <span style={{ color: "#9f1239", fontWeight: 600, display: "block" }}>📅 First Created:</span>
+                  <span style={{ color: "#371b22" }}>{formatTimestamp(historyModalTemplate.createdAt)}</span>
+                </div>
+                <div>
+                  <span style={{ color: "#9f1239", fontWeight: 600, display: "block" }}>⏱️ Last Visited / Created:</span>
+                  <strong style={{ color: "#be123c" }}>
+                    {formatTimestamp(historyModalTemplate.lastVisitedAt || historyModalTemplate.updatedAt || historyModalTemplate.createdAt)}
+                  </strong>
+                </div>
+              </div>
+
+              {/* Timeline of Each Creation */}
+              <h4 style={{ fontSize: "13px", fontWeight: 800, color: "#881337", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Creation Activity Log ({getHistoryList(historyModalTemplate).length} Recorded Event(s))
+              </h4>
+
+              <div className="history-timeline" style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                {getHistoryList(historyModalTemplate).map((item, index, arr) => {
+                  const isLatest = index === 0;
+                  const eventNumber = arr.length - index;
+                  return (
+                    <div
+                      key={item._id || item.templateId || index}
+                      style={{
+                        background: isLatest ? "#ffffff" : "#fafafa",
+                        border: isLatest ? "2px solid #fda4af" : "1px solid #e2e8f0",
+                        borderRadius: "14px",
+                        padding: "16px 18px",
+                        boxShadow: isLatest ? "0 4px 14px rgba(225, 29, 72, 0.08)" : "none",
+                        position: "relative",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <span
+                            style={{
+                              background: isLatest ? "#e11d48" : "#64748b",
+                              color: "#fff",
+                              fontSize: "11px",
+                              fontWeight: 800,
+                              padding: "3px 9px",
+                              borderRadius: "999px",
+                            }}
+                          >
+                            Visit / Creation #{eventNumber} {isLatest && "• LATEST"}
+                          </span>
+                          <strong style={{ fontSize: "14px", color: "#1e293b" }}>
+                            {item.name || historyModalTemplate.name}
+                            {item.nickname && ` ("${item.nickname}")`}
+                          </strong>
+                        </div>
+                        <span style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>
+                          🕒 {formatTimestamp(item.createdAt || item.timestamp)}
+                        </span>
+                      </div>
+
+                      <div style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
+                        {item.photo ? (
+                          <img
+                            src={item.photo}
+                            alt={item.name}
+                            style={{ width: "64px", height: "64px", borderRadius: "10px", objectFit: "cover", flexShrink: 0, border: "1px solid #fecdd3" }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: "64px",
+                              height: "64px",
+                              borderRadius: "10px",
+                              background: "#fff1f2",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "24px",
+                              flexShrink: 0,
+                              border: "1px solid #fecdd3",
+                            }}
+                          >
+                            🎂
+                          </div>
+                        )}
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          {item.sender && (
+                            <div style={{ fontSize: "12px", color: "#d95775", marginBottom: "4px", fontWeight: 700 }}>
+                              💌 Sender: {item.sender}
+                            </div>
+                          )}
+                          {item.message && (
+                            <p
+                              style={{
+                                fontSize: "12.5px",
+                                color: "#475569",
+                                margin: "0 0 8px",
+                                background: "#f8fafc",
+                                padding: "8px 12px",
+                                borderRadius: "8px",
+                                border: "1px solid #f1f5f9",
+                                fontStyle: "italic",
+                                maxHeight: "80px",
+                                overflowY: "auto",
+                              }}
+                            >
+                              &ldquo;{item.message}&rdquo;
+                            </p>
+                          )}
+                          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", fontSize: "11.5px", color: "#64748b" }}>
+                            <span>📸 {item.galleryCount || (item.gallery ? item.gallery.length : 0)} gallery photos</span>
+                            <span>✦ {item.reasonsCount || (item.reasons ? item.reasons.length : 0)} reasons</span>
+                            {item.dob && <span>🎂 DOB: {item.dob}</span>}
+                            {item.age && <span>({item.age} yrs)</span>}
+                            <code style={{ fontSize: "10.5px", color: "#94a3b8" }}>ID: {item.templateId || "N/A"}</code>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="analytics-view-btn"
+                          onClick={() => {
+                            setPreviewingTemplate({
+                              ...historyModalTemplate,
+                              ...item,
+                              templateId: item.templateId || historyModalTemplate.templateId,
+                            });
+                          }}
+                          style={{
+                            background: "#fff",
+                            color: "#d95775",
+                            borderColor: "#fecdd3",
+                            padding: "6px 12px",
+                            fontSize: "11.5px",
+                            fontWeight: 700,
+                            alignSelf: "center",
+                          }}
+                          title="Preview this historical celebration draft"
+                        >
+                          👀 Preview
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="analytics-modal-footer" style={{ display: "flex", justifyContent: "flex-end", borderTop: "1px solid #f1f5f9" }}>
+              <button
+                type="button"
+                className="analytics-modal-footer-btn"
+                onClick={() => setHistoryModalTemplate(null)}
+              >
+                Close History
+              </button>
+            </div>
           </div>
         </div>
       )}
