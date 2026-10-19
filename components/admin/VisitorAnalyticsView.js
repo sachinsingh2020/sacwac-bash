@@ -1312,7 +1312,29 @@ export default function VisitorAnalyticsView({ adminToken }) {
               <span className="admin-preview-dot-pulse" />
               <div className="admin-preview-info-text">
                 <span className="admin-preview-badge">Draft Template</span>
-                <span className="admin-preview-name">{previewingTemplate.name}</span>
+                <span className="admin-preview-name">For: {previewingTemplate.name}</span>
+                {previewingTemplate.sender ? (
+                  <span
+                    style={{
+                      background: "#fff1f2",
+                      border: "1px solid #fecdd3",
+                      color: "#e11d48",
+                      fontSize: "12px",
+                      fontWeight: 800,
+                      padding: "2px 9px",
+                      borderRadius: "999px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "3px",
+                    }}
+                  >
+                    💌 Created by: {previewingTemplate.sender}
+                  </span>
+                ) : (
+                  <span style={{ fontSize: "11px", color: "#8a6d77" }}>
+                    (Creator: Not specified)
+                  </span>
+                )}
                 {previewingTemplate.age && (
                   <span className="admin-preview-meta">({previewingTemplate.age} yrs)</span>
                 )}
@@ -1350,8 +1372,10 @@ export default function VisitorAnalyticsView({ adminToken }) {
               isPreview={true}
               isAdminPreview={true}
               previewData={{
+                ...previewingTemplate,
                 name: previewingTemplate.name,
                 nickname: previewingTemplate.nickname || previewingTemplate.name,
+                sender: previewingTemplate.sender || "",
                 dob: previewingTemplate.dob,
                 age: previewingTemplate.age,
                 date: previewingTemplate.date,
