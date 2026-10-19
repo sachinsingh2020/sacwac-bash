@@ -17,7 +17,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
     paidSlugs: [],
   });
 
-  // Four main sections: "buyers" | "abandoned" | "users" | "visitors"
+  // Three main sections: "buyers" | "abandoned" | "visitors"
   const [activeMainTab, setActiveMainTab] = useState("buyers");
   const [selectedSlug, setSelectedSlug] = useState("all");
   const [customDate, setCustomDate] = useState("");
@@ -38,11 +38,6 @@ export default function VisitorAnalyticsView({ adminToken }) {
   const [isConverting, setIsConverting] = useState(false);
   const [convertError, setConvertError] = useState("");
   const [copiedLiveSlug, setCopiedLiveSlug] = useState("");
-
-  // Logged-in users state
-  const [usersList, setUsersList] = useState([]);
-  const [loadingUsers, setLoadingUsers] = useState(true);
-  const [userSearchQuery, setUserSearchQuery] = useState("");
 
   // Search query for abandoned tab
   const [abandonedSearchQuery, setAbandonedSearchQuery] = useState("");
@@ -95,28 +90,10 @@ export default function VisitorAnalyticsView({ adminToken }) {
     }
   }, [adminToken]);
 
-  const fetchUsers = useCallback(async () => {
-    setLoadingUsers(true);
-    try {
-      const headers = {};
-      if (adminToken) headers["x-admin-token"] = adminToken;
-      const res = await fetch("/api/admin/users", { headers });
-      if (res.ok) {
-        const json = await res.json();
-        setUsersList(Array.isArray(json) ? json : []);
-      }
-    } catch (err) {
-      console.error("Failed to load users:", err);
-    } finally {
-      setLoadingUsers(false);
-    }
-  }, [adminToken]);
-
   useEffect(() => {
     fetchAnalytics();
     fetchAbandonedTemplates();
-    fetchUsers();
-  }, [fetchAnalytics, fetchAbandonedTemplates, fetchUsers]);
+  }, [fetchAnalytics, fetchAbandonedTemplates]);
 
   // Run 1-month reminder email trigger check
   const handleTriggerReminders = async () => {
@@ -196,16 +173,6 @@ export default function VisitorAnalyticsView({ adminToken }) {
   const homeVisitorsCount = useMemo(() => {
     return (data.records || []).filter((r) => !r.slug).length;
   }, [data.records]);
-
-  // Filter users by search
-  const filteredUsers = useMemo(() => {
-    if (!userSearchQuery.trim()) return usersList;
-    const q = userSearchQuery.toLowerCase();
-    return usersList.filter((u) =>
-      (u.email && u.email.toLowerCase().includes(q)) ||
-      (u.name && u.name.toLowerCase().includes(q))
-    );
-  }, [usersList, userSearchQuery]);
 
   // Helper to sort abandoned templates by lastVisitedAt (descending) so active returning visitors are on top
   const sortAbandonedByLastVisited = (a, b) => {
@@ -481,18 +448,6 @@ export default function VisitorAnalyticsView({ adminToken }) {
           <span>people who create but didn&apos;t buy</span>
           <span className="analytics-tab-pill-badge" style={{ background: "#fff0f3", color: "#d95775" }}>
             {loadingAbandoned ? "..." : abandonedTemplates.length}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          className={`analytics-view-tab-btn ${activeMainTab === "users" ? "active" : ""}`}
-          onClick={() => setActiveMainTab("users")}
-        >
-          <span>👥</span>
-          <span>Logged In Users</span>
-          <span className="analytics-tab-pill-badge" style={{ background: "#eff6ff", color: "#2563eb" }}>
-            {loadingUsers ? "..." : usersList.length}
           </span>
         </button>
 
@@ -1130,152 +1085,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
       )}
 
       {/* ============================================================== */}
-      {/* TAB 3: LOGGED IN USERS                                         */}
-      {/* ============================================================== */}
-      {activeMainTab === "users" && (
-        <section className="users-section" aria-label="Logged In Users">
-          <div className="buyers-header-card">
-            <div className="buyers-header-title">
-              <h3>
-                <span>👥</span>
-                <span>Dedicated Logged In Users Directory</span>
-              </h3>
-              <p>
-                Permanent list of all registered and logged in users with their email addresses for your records and future communication.
-              </p>
-            </div>
-            <button
-              type="button"
-              className="analytics-refresh-btn"
-              onClick={fetchUsers}
-              disabled={loadingUsers}
-            >
-              {loadingUsers ? "Refreshing..." : "↻ Refresh Users"}
-            </button>
-          </div>
-
-          {loadingUsers ? (
-            <div className="analytics-page-loader">
-              <div className="analytics-circle-spinner" />
-              <h3 className="analytics-loader-title">Loading Registered Users...</h3>
-              <p className="analytics-loader-sub">Fetching user directory and authentication profiles</p>
-            </div>
-          ) : (
-            <div className="analytics-table-card">
-            <div className="analytics-table-head-row">
-              <h3 className="analytics-table-title">
-                <span>📧 Registered Users ({filteredUsers.length})</span>
-              </h3>
-              <input
-                type="text"
-                className="analytics-search-input"
-                placeholder="Search email or name..."
-                value={userSearchQuery}
-                onChange={(e) => setUserSearchQuery(e.target.value)}
-              />
-            </div>
-
-            {filteredUsers.length === 0 ? (
-              <div className="analytics-empty">
-                <div className="analytics-empty-icon">👥</div>
-                <strong>No registered users found.</strong>
-                <p>When visitors sign in via Google OAuth or Email OTP to claim the ₹49 rate, their profile and email are permanently saved here.</p>
-              </div>
-            ) : (
-              <div className="analytics-table-wrap">
-                <table className="analytics-table">
-                  <thead>
-                    <tr>
-                      <th>User Name &amp; Profile</th>
-                      <th>Email Address</th>
-                      <th>Login Provider</th>
-                      <th>First Joined</th>
-                      <th>Last Login</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUsers.map((u) => (
-                      <tr key={u._id || u.id || u.email}>
-                        <td>
-                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                            {u.picture ? (
-                              <img src={u.picture} alt={u.name} className="buyer-thumb-avatar" />
-                            ) : (
-                              <div className="buyer-monogram-avatar" style={{ background: "#e0f2fe", color: "#0369a1" }}>
-                                {u.name ? u.name[0].toUpperCase() : "U"}
-                              </div>
-                            )}
-                            <strong>{u.name || "User"}</strong>
-                          </div>
-                        </td>
-
-                        <td>
-                          <span style={{ fontSize: "13px", fontWeight: 600, color: "#1e3a8a" }}>
-                            {u.email}
-                          </span>
-                        </td>
-
-                        <td>
-                          <span
-                            style={{
-                              display: "inline-block",
-                              padding: "4px 10px",
-                              borderRadius: "12px",
-                              fontSize: "11.5px",
-                              fontWeight: 700,
-                              background: u.provider === "google" ? "#fee2e2" : "#f1f5f9",
-                              color: u.provider === "google" ? "#b91c1c" : "#475569",
-                            }}
-                          >
-                            {u.provider === "google" ? "Google OAuth" : "Email OTP"}
-                          </span>
-                        </td>
-
-                        <td>
-                          <span style={{ fontSize: "11.5px", color: "#64748b" }}>
-                            {formatTimestamp(u.createdAt)}
-                          </span>
-                        </td>
-
-                        <td>
-                          <span style={{ fontSize: "11.5px", color: "#64748b" }}>
-                            {formatTimestamp(u.lastLoginAt || u.createdAt)}
-                          </span>
-                        </td>
-
-                        <td>
-                          <button
-                            type="button"
-                            className="analytics-view-btn analytics-delete-action-btn"
-                            onClick={() =>
-                              promptDelete(
-                                "user",
-                                u._id || u.id,
-                                u.email,
-                                `Name: ${u.name || "User"} • Provider: ${u.provider}`,
-                                null,
-                                false
-                              )
-                            }
-                            title="Permanently delete this registered user account"
-                          >
-                            🗑️ Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-          )}
-        </section>
-      )}
-
-      {/* ============================================================== */}
-      {/* TAB 4: VISITOR ANALYTICS & TRAFFIC (Max 2,000 normal visits)    */}
+      {/* TAB 3: VISITOR ANALYTICS & TRAFFIC (Max 2,000 normal visits)    */}
       {/* ============================================================== */}
       {activeMainTab === "visitors" && (
         <section className="traffic-section" aria-label="Visitor Traffic Section">
