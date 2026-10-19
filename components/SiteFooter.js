@@ -42,12 +42,27 @@ export default function SiteFooter() {
             </div>
 
             <div className="support-action-box">
-              <div className="support-email-pill" onClick={() => setIsSupportModalOpen(true)} style={{ cursor: "pointer" }}>
-                <span className="support-email-icon">💌</span>
-                <span className="support-email-label">Contact:</span>
-                <span className="support-email-address" title="Click to open support form">
-                  {supportEmail}
-                </span>
+              <div
+                className="support-email-pill"
+                onClick={() => setIsSupportModalOpen(true)}
+                title="Click to open support form"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    setIsSupportModalOpen(true);
+                  }
+                }}
+              >
+                <div className="support-email-main">
+                  <span className="support-email-icon">💌</span>
+                  <div className="support-email-text-wrap">
+                    <span className="support-email-label">Support Email</span>
+                    <span className="support-email-address">
+                      {supportEmail}
+                    </span>
+                  </div>
+                </div>
                 <button
                   type="button"
                   className="support-copy-btn"
@@ -87,13 +102,16 @@ export default function SiteFooter() {
               <span className="site-footer-links-title">Quick Links</span>
               <div className="site-footer-links-grid">
                 <Link href="/create" className="site-footer-link">
-                  Create Birthday Surprise 🎂
+                  <span className="site-footer-link-icon">🎂</span>
+                  <span>Create Birthday Surprise</span>
                 </Link>
                 <Link href="/privacy" className="site-footer-link">
-                  Privacy Policy
+                  <span className="site-footer-link-icon">🔒</span>
+                  <span>Privacy Policy</span>
                 </Link>
                 <Link href="/terms" className="site-footer-link">
-                  Terms of Service
+                  <span className="site-footer-link-icon">📄</span>
+                  <span>Terms of Service</span>
                 </Link>
               </div>
             </div>
