@@ -10,6 +10,9 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 export const metadata = {
   title: "Magic Moments",
   description: "A little universe made just for you.",
+  verification: {
+    google: "37a7a11eb31035e9",
+  },
 };
 
 export const viewport = {
