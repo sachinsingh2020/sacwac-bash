@@ -1578,3 +1578,134 @@
   cursor: not-allowed;
   transform: none !important;
 }
+
+
+/* ============================================================== */
+/* BUYERS MONTHLY FILTER STYLES                                   */
+/* ============================================================== */
+.buyers-filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.buyer-month-select-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.buyer-month-select {
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #eadce0;
+  background: #ffffff;
+  padding-right: 28px;
+  min-width: 200px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238e7d83' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.buyer-month-pills-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px dashed #f0e2e6;
+}
+
+.buyer-month-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid #ebd8de;
+  background: #fff8fa;
+  color: #634f55;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.buyer-month-pill:hover {
+  background: #fdeef2;
+  border-color: #d95775;
+  color: #d95775;
+  transform: translateY(-1px);
+}
+
+.buyer-month-pill.active {
+  background: linear-gradient(135deg, #d95775, #c24361);
+  border-color: #d95775;
+  color: #ffffff;
+  box-shadow: 0 3px 8px rgba(217, 87, 117, 0.25);
+}
+
+.buyer-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+  color: inherit;
+}
+
+.buyer-month-pill.active .buyer-pill-badge {
+  background: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+}
+
+.buyer-month-pill-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.buyer-month-pill-clear:hover {
+  background: #fee2e2;
+  border-color: #ef4444;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .buyers-filter-controls {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .buyer-month-select-wrapper,
+  .buyer-month-select {
+    width: 100%;
+  }
+  .buyer-month-pills-bar {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 10px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .buyer-month-pill {
+    flex-shrink: 0;
+  }
+}

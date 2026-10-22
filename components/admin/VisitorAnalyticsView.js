@@ -23,6 +23,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
   const [customDate, setCustomDate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [buyerSearchQuery, setBuyerSearchQuery] = useState("");
+  const [buyerMonthFilter, setBuyerMonthFilter] = useState("all"); // "all" | "YYYY-MM"
   const [visitorFilter, setVisitorFilter] = useState("all"); // "all" | "paid" | "home"
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [copiedUa, setCopiedUa] = useState(false);
@@ -127,24 +128,87 @@ export default function VisitorAnalyticsView({ adminToken }) {
     };
   }, [previewingTemplate]);
 
-  // Filter paid buyers by search
-  const filteredBuyers = useMemo(() => {
-    const list = data.paidBuyers || [];
-    if (!buyerSearchQuery.trim()) return list;
-    const q = buyerSearchQuery.toLowerCase();
-    return list.filter((b) =>
-      (b.name && b.name.toLowerCase().includes(q)) ||
-      (b.nickname && b.nickname.toLowerCase().includes(q)) ||
-      (b.slug && b.slug.toLowerCase().includes(q)) ||
-      (b.paymentId && b.paymentId.toLowerCase().includes(q)) ||
-      (b.orderId && b.orderId.toLowerCase().includes(q))
-    );
-  }, [data.paidBuyers, buyerSearchQuery]);
+  // Dynamic list of months available for filtering (current year months + any months present in data)
+  const availableMonths = useMemo(() => {
+    const monthsMap = new Map();
+    const currentYear = new Date().getFullYear();
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
 
-  // Total views across all paid links
-  const totalPaidViews = useMemo(() => {
-    return (data.paidBuyers || []).reduce((acc, b) => acc + (b.totalVisits || 0), 0);
+    // Initialize all 12 calendar months for current year
+    for (let m = 11; m >= 0; m--) {
+      const monthStr = String(m + 1).padStart(2, "0");
+      const key = `${currentYear}-${monthStr}`;
+      monthsMap.set(key, {
+        key,
+        label: `${monthNames[m]} ${currentYear}`,
+        shortLabel: `${monthNames[m].slice(0, 3)} '${String(currentYear).slice(2)}`,
+        count: 0,
+      });
+    }
+
+    // Populate order counts and add any other historical years
+    (data.paidBuyers || []).forEach((b) => {
+      const dateStr = b.createdAt || b.date;
+      if (!dateStr) return;
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return;
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      const key = `${y}-${String(m + 1).padStart(2, "0")}`;
+      if (!monthsMap.has(key)) {
+        monthsMap.set(key, {
+          key,
+          label: `${monthNames[m]} ${y}`,
+          shortLabel: `${monthNames[m].slice(0, 3)} '${String(y).slice(2)}`,
+          count: 0,
+        });
+      }
+      monthsMap.get(key).count += 1;
+    });
+
+    return Array.from(monthsMap.values()).sort((a, b) => b.key.localeCompare(a.key));
   }, [data.paidBuyers]);
+
+  // Filter paid buyers by month and search
+  const filteredBuyers = useMemo(() => {
+    let list = data.paidBuyers || [];
+
+    // Monthly filter
+    if (buyerMonthFilter !== "all") {
+      list = list.filter((b) => {
+        const dateStr = b.createdAt || b.date;
+        if (!dateStr) return false;
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return false;
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        return `${y}-${m}` === buyerMonthFilter;
+      });
+    }
+
+    // Search query filter
+    if (buyerSearchQuery.trim()) {
+      const q = buyerSearchQuery.toLowerCase();
+      list = list.filter((b) =>
+        (b.name && b.name.toLowerCase().includes(q)) ||
+        (b.nickname && b.nickname.toLowerCase().includes(q)) ||
+        (b.slug && b.slug.toLowerCase().includes(q)) ||
+        (b.paymentId && b.paymentId.toLowerCase().includes(q)) ||
+        (b.orderId && b.orderId.toLowerCase().includes(q)) ||
+        (b.userEmail && b.userEmail.toLowerCase().includes(q))
+      );
+    }
+
+    return list;
+  }, [data.paidBuyers, buyerMonthFilter, buyerSearchQuery]);
+
+  // Total views across paid links in current filter
+  const totalPaidViews = useMemo(() => {
+    return (filteredBuyers || []).reduce((acc, b) => acc + (b.totalVisits || 0), 0);
+  }, [filteredBuyers]);
 
   // Filter visitor records by sub-filter pill & search query
   const filteredRecords = useMemo(() => {
@@ -536,20 +600,34 @@ export default function VisitorAnalyticsView({ adminToken }) {
                 <div className="buyers-compact-card">
                   <div className="buyers-compact-icon" style={{ background: "#fef0f3" }}>🎉</div>
                   <div className="buyers-compact-body">
-                    <span className="buyers-compact-label">Paid Celebrations</span>
-                    <div className="buyers-compact-value">{data.paidBuyersCount || 0}</div>
-                    <span className="buyers-compact-sub">Verified customer orders</span>
+                    <span className="buyers-compact-label">
+                      {buyerMonthFilter === "all" ? "Paid Celebrations" : "Monthly Celebrations"}
+                    </span>
+                    <div className="buyers-compact-value">
+                      {buyerMonthFilter === "all" ? (data.paidBuyersCount || 0) : filteredBuyers.length}
+                    </div>
+                    <span className="buyers-compact-sub">
+                      {buyerMonthFilter === "all"
+                        ? "Verified customer orders"
+                        : `Orders in ${availableMonths.find((m) => m.key === buyerMonthFilter)?.label || buyerMonthFilter}`}
+                    </span>
                   </div>
                 </div>
 
                 <div className="buyers-compact-card">
                   <div className="buyers-compact-icon" style={{ background: "#fdf6e9" }}>💰</div>
                   <div className="buyers-compact-body">
-                    <span className="buyers-compact-label">Total Revenue</span>
+                    <span className="buyers-compact-label">
+                      {buyerMonthFilter === "all" ? "Total Revenue" : "Monthly Revenue"}
+                    </span>
                     <div className="buyers-compact-value">
-                      ₹{(data.paidBuyers || []).reduce((sum, b) => sum + (b.amountPaid || 199), 0)}
+                      ₹{filteredBuyers.reduce((sum, b) => sum + (b.amountPaid || 199), 0)}
                     </div>
-                    <span className="buyers-compact-sub">Permanent customer records</span>
+                    <span className="buyers-compact-sub">
+                      {buyerMonthFilter === "all"
+                        ? "Permanent customer records"
+                        : `Revenue in ${availableMonths.find((m) => m.key === buyerMonthFilter)?.label || buyerMonthFilter}`}
+                    </span>
                   </div>
                 </div>
 
@@ -581,23 +659,117 @@ export default function VisitorAnalyticsView({ adminToken }) {
                 <div className="analytics-table-head-row">
                   <h3 className="analytics-table-title">
                     <span>💎 Verified Buyers &amp; Live Celebration Links</span>
-                    <span className="count">({filteredBuyers.length} buyers)</span>
+                    <span className="count">
+                      ({filteredBuyers.length} {buyerMonthFilter !== "all" ? `in ${availableMonths.find((m) => m.key === buyerMonthFilter)?.label || buyerMonthFilter}` : "buyers"})
+                    </span>
                   </h3>
 
-                  <input
-                    type="text"
-                    className="analytics-search-input"
-                    placeholder="Search name, slug, payment ID..."
-                    value={buyerSearchQuery}
-                    onChange={(e) => setBuyerSearchQuery(e.target.value)}
-                  />
+                  <div className="buyers-filter-controls">
+                    {/* Monthly Filter Dropdown */}
+                    <div className="buyer-month-select-wrapper">
+                      <select
+                        className="analytics-select buyer-month-select"
+                        value={buyerMonthFilter}
+                        onChange={(e) => setBuyerMonthFilter(e.target.value)}
+                        title="Filter buyers by month"
+                        aria-label="Filter buyers by month"
+                      >
+                        <option value="all">📅 All Months (All Time • {data.paidBuyers?.length || 0})</option>
+                        <optgroup label="Select Month">
+                          {availableMonths.map((m) => (
+                            <option key={m.key} value={m.key}>
+                              {m.label} ({m.count} order{m.count === 1 ? "" : "s"})
+                            </option>
+                          ))}
+                        </optgroup>
+                      </select>
+                    </div>
+
+                    <input
+                      type="text"
+                      className="analytics-search-input"
+                      placeholder="Search name, slug, payment ID..."
+                      value={buyerSearchQuery}
+                      onChange={(e) => setBuyerSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Interactive Month Filter Quick Bar */}
+                <div className="buyer-month-pills-bar" role="region" aria-label="Month filter quick selector">
+                  <button
+                    type="button"
+                    className={`buyer-month-pill ${buyerMonthFilter === "all" ? "active" : ""}`}
+                    onClick={() => setBuyerMonthFilter("all")}
+                    title="Show all successful buyers across all time"
+                  >
+                    <span>📅 All Months</span>
+                    <span className="buyer-pill-badge">{data.paidBuyers?.length || 0}</span>
+                  </button>
+
+                  {/* Show pills for months with orders or current month */}
+                  {availableMonths
+                    .filter((m) => m.count > 0 || m.key === `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`)
+                    .map((m) => (
+                      <button
+                        key={m.key}
+                        type="button"
+                        className={`buyer-month-pill ${buyerMonthFilter === m.key ? "active" : ""}`}
+                        onClick={() => setBuyerMonthFilter(m.key)}
+                        title={`Filter to ${m.label} (${m.count} orders)`}
+                      >
+                        <span>{m.label}</span>
+                        <span className="buyer-pill-badge">{m.count}</span>
+                      </button>
+                    ))}
+
+                  {buyerMonthFilter !== "all" && (
+                    <button
+                      type="button"
+                      className="buyer-month-pill-clear"
+                      onClick={() => setBuyerMonthFilter("all")}
+                      title="Clear month filter and show all"
+                    >
+                      ✕ Clear Month Filter
+                    </button>
+                  )}
                 </div>
 
                 {filteredBuyers.length === 0 ? (
                   <div className="analytics-empty">
                     <div className="analytics-empty-icon">💎</div>
-                    <strong>No successful buyers match your filter.</strong>
-                    <p>When visitors complete their ₹49 or ₹199 purchase, their details and live links will appear here permanently.</p>
+                    <strong>
+                      {buyerMonthFilter !== "all"
+                        ? `No successful buyers found in ${availableMonths.find((m) => m.key === buyerMonthFilter)?.label || buyerMonthFilter}.`
+                        : "No successful buyers match your filter."}
+                    </strong>
+                    <p>
+                      {buyerMonthFilter !== "all"
+                        ? "There were no completed orders recorded in this month. You can select another month or view all months."
+                        : "When visitors complete their ₹49 or ₹199 purchase, their details and live links will appear here permanently."}
+                    </p>
+                    {buyerMonthFilter !== "all" && (
+                      <button
+                        type="button"
+                        className="analytics-view-btn"
+                        onClick={() => {
+                          setBuyerMonthFilter("all");
+                          setBuyerSearchQuery("");
+                        }}
+                        style={{
+                          marginTop: 14,
+                          background: "#d95775",
+                          color: "#ffffff",
+                          borderColor: "#d95775",
+                          padding: "8px 18px",
+                          borderRadius: "8px",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        📅 Show All Months ({data.paidBuyers?.length || 0})
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="analytics-table-wrap">
