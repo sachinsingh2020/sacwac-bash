@@ -26,9 +26,18 @@ export async function DELETE(request) {
 
     // 1. DELETE BUYER / PAID BIRTHDAY PAGE
     if (type === 'buyer') {
+      const isObjectId = typeof id === 'string' && id.length === 24 && /^[0-9a-fA-F]{24}$/.test(id);
       const query = [];
-      if (id) query.push({ _id: id });
-      if (slug) query.push({ slug });
+      if (isObjectId) query.push({ _id: id });
+      if (id && !isObjectId) query.push({ slug: id });
+      if (slug) {
+        const cleanSlug = slug.trim().replace(/^\//, '');
+        query.push({ slug: cleanSlug });
+      }
+
+      if (query.length === 0) {
+        return NextResponse.json({ error: 'Missing valid identifier for buyer page.' }, { status: 400 });
+      }
 
       const page = await BirthdayPage.findOne({ $or: query });
       if (!page) {
@@ -44,6 +53,11 @@ export async function DELETE(request) {
       // Clean up visitor logs for this link
       if (page.slug) {
         await VisitorLog.deleteMany({ slug: page.slug });
+      }
+
+      // If this page was converted from an abandoned template, clean that up too
+      if (page.slug) {
+        await AbandonedTemplate.deleteMany({ convertedSlug: page.slug });
       }
 
       return NextResponse.json({
