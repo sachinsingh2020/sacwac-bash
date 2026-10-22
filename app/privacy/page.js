@@ -1,5 +1,4 @@
 import Link from "next/link";
-import SiteFooter from "../../components/SiteFooter";
 import "./policy.css";
 
 export const metadata = {
@@ -124,7 +123,6 @@ export default function PrivacyPolicyPage() {
           <Link href="/terms">Terms of Service →</Link>
         </footer>
       </div>
-      <SiteFooter />
     </main>
   );
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import PaymentSupportModal from "./PaymentSupportModal";
 
 function loadRazorpayScript() {
   return new Promise((resolve) => {
@@ -32,7 +31,6 @@ export default function RazorpayCheckoutModal({
   const [showExitWarning, setShowExitWarning] = useState(false);
   const [animStep, setAnimStep] = useState(0); // 0: initial ₹199, 1: pen crossing out, 2: ₹49 revealed
   const [capturedPayment, setCapturedPayment] = useState(null);
-  const [showSupportModal, setShowSupportModal] = useState(false);
 
   // Trigger fast pen-crossing animation when modal opens
   useEffect(() => {
@@ -318,18 +316,6 @@ export default function RazorpayCheckoutModal({
           <p className="checkout-guarantee-note">
             🔒 Secure 256-bit payment via Razorpay · Instant link generation
           </p>
-
-          <div className="checkout-support-footer-note">
-            <span className="checkout-support-label">Payment done but not received the link?</span>
-            <button
-              type="button"
-              onClick={() => setShowSupportModal(true)}
-              className="checkout-support-email-link"
-              style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
-            >
-              Contact: <strong>magicmoments.work@gmail.com</strong>
-            </button>
-          </div>
         </div>
       </div>
 
@@ -364,12 +350,6 @@ export default function RazorpayCheckoutModal({
           </div>
         </div>
       )}
-
-      {/* Payment Support Modal */}
-      <PaymentSupportModal
-        isOpen={showSupportModal}
-        onClose={() => setShowSupportModal(false)}
-      />
     </>
   );
 }
