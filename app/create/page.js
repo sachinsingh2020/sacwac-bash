@@ -6,7 +6,6 @@ import { compressImage } from "../../lib/compressImage";
 import ImageCropperModal from "./ImageCropperModal";
 import BirthdayExperience from "../../components/BirthdayExperience";
 import RazorpayCheckoutModal from "../../components/RazorpayCheckoutModal";
-import SiteFooter from "../../components/SiteFooter";
 import { getBirthdayTargetInfo } from "../../lib/birthdayCountdown";
 import "./wizard.css";
 
@@ -1403,9 +1402,6 @@ export default function BirthdayCreateWizard() {
           </div>
         </div>
       )}
-
-      {/* Site Footer */}
-      <SiteFooter />
     </main>
   );
 }
