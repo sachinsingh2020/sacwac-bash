@@ -334,11 +334,15 @@ export default function VisitorAnalyticsView({ adminToken }) {
 
       // Optimistically update frontend state
       if (deleteModalItem.type === "buyer") {
+        const targetId = deleteModalItem.id;
+        const targetSlug = deleteModalItem.slug;
         setData((prev) => ({
           ...prev,
-          paidBuyers: (prev.paidBuyers || []).filter(
-            (b) => b._id !== deleteModalItem.id && b.slug !== deleteModalItem.slug
-          ),
+          paidBuyers: (prev.paidBuyers || []).filter((b) => {
+            const idMatch = targetId && (b._id === targetId || b.id === targetId);
+            const slugMatch = targetSlug && b.slug === targetSlug;
+            return !(idMatch || slugMatch);
+          }),
           paidBuyersCount: Math.max(0, (prev.paidBuyersCount || 0) - 1),
         }));
       } else if (deleteModalItem.type === "abandoned") {
@@ -784,7 +788,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
                                   onClick={() =>
                                     promptDelete(
                                       "buyer",
-                                      b._id,
+                                      b._id || b.id,
                                       b.name,
                                       `Slug: /${b.slug} • Payment ID: ${b.paymentId || "N/A"}`,
                                       b.slug,

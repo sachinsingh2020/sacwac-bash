@@ -102,6 +102,7 @@ export async function GET(request) {
     }
 
     const paidBuyers = (paidPages || []).map((p) => ({
+      _id: p._id.toString(),
       id: p._id.toString(),
       slug: p.slug,
       name: p.name || 'Someone Special',
