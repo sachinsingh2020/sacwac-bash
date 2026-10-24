@@ -148,10 +148,14 @@ function ExclusiveOfferContent() {
       // Track InitiateCheckout in Meta Pixel
       if (typeof window !== "undefined" && typeof window.fbq === "function") {
         try {
+          const initPrice = Number(Number(price || 29).toFixed(2));
           window.fbq("track", "InitiateCheckout", {
-            value: price,
+            value: initPrice,
             currency: "INR",
+            content_type: "product",
             content_name: `Discount Offer: Celebration Page (₹${price})`,
+            content_ids: ["celebration_offer_page"],
+            num_items: 1,
           });
         } catch (e) {}
       }
@@ -197,10 +201,14 @@ function ExclusiveOfferContent() {
             // Track Purchase in Meta Pixel
             if (typeof window !== "undefined" && typeof window.fbq === "function") {
               try {
+                const finalPrice = Number(Number(price || 29).toFixed(2));
                 window.fbq("track", "Purchase", {
-                  value: price,
+                  value: finalPrice,
                   currency: "INR",
+                  content_type: "product",
                   content_name: `Celebration Page: ${verifyData.slug}`,
+                  content_ids: [verifyData.slug || "celebration_page"],
+                  num_items: 1,
                 });
               } catch (e) {}
             }
