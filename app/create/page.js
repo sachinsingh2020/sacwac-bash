@@ -88,6 +88,7 @@ export default function BirthdayCreateWizard() {
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [publishError, setPublishError] = useState("");
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [showPurchaseCelebration, setShowPurchaseCelebration] = useState(false);
   const [copied, setCopied] = useState(false);
   const [hasSeenPreview, setHasSeenPreview] = useState(false);
   const [templateId, setTemplateId] = useState(() => "tmpl_" + Math.random().toString(36).substring(2, 10) + Date.now().toString(36));
@@ -588,6 +589,7 @@ export default function BirthdayCreateWizard() {
     setCreatedSlug(slug);
     setShowCheckoutModal(false);
     setIsPreviewMode(false);
+    setShowPurchaseCelebration(true);
     changeStep(6);
   };
 
@@ -1151,6 +1153,47 @@ export default function BirthdayCreateWizard() {
 
         {/* STEP 6: Celebration Unlocked & Share Hub */}
         {step === 6 && (
+          showPurchaseCelebration ? (
+            <div className="preview-step-card purchase-celebration-card">
+              <span className="purchase-celebration-icons">🎉🎂💖</span>
+              <div className="purchase-celebration-badge-pill">
+                ✓ Payment Successful &amp; Activated
+              </div>
+              <h2 className="purchase-celebration-title">
+                You have successfully bought a birthday wish for your loved one!
+              </h2>
+              <p className="purchase-celebration-desc">
+                Your personalized interactive celebration surprise for <strong>{formData.name || "someone special"}</strong> is now officially unlocked and ready to bring them tears of joy.
+              </p>
+
+              <div className="purchase-celebration-info-box">
+                <div className="purchase-info-row">
+                  <span className="purchase-info-icon">🎁</span>
+                  <span><strong>Celebrant:</strong> {formData.name || "Someone Special"}</span>
+                </div>
+                <div className="purchase-info-row">
+                  <span className="purchase-info-icon">✨</span>
+                  <span><strong>Includes:</strong> Interactive cake, music, photo gallery, heartfelt letter &amp; wishes</span>
+                </div>
+                <div className="purchase-info-row">
+                  <span className="purchase-info-icon">🔒</span>
+                  <span><strong>Access:</strong> Permanent link with lifetime access</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="purchase-celebration-next-btn"
+                onClick={() => {
+                  setShowPurchaseCelebration(false);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              >
+                <span>Next</span>
+                <span>→</span>
+              </button>
+            </div>
+          ) : (
           <div className="preview-step-card final-share-card">
             <span className="preview-trophy-icon">🎉🎂✨</span>
             <div className="final-share-pill">✨ Celebration Published!</div>
@@ -1275,6 +1318,7 @@ export default function BirthdayCreateWizard() {
               </button>
             </div>
           </div>
+          )
         )}
 
         {/* Footer Navigation Buttons (Steps 1 to 5) */}

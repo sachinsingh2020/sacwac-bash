@@ -1,5 +1,4 @@
 import { Fredoka, Caveat, Inter } from "next/font/google";
-import Script from "next/script";
 import TrackVisit from "../components/TrackVisit";
 import "./globals.css";
 
@@ -27,9 +26,8 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-        <Script
+        <script
           id="meta-pixel"
-          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               !function(f,b,e,v,n,t,s)

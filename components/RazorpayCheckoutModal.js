@@ -99,13 +99,16 @@ export default function RazorpayCheckoutModal({
         throw new Error(verifyData.error || "Payment verification failed.");
       }
 
-      // Track Purchase in Meta Pixel
+      // Track Purchase in Meta Pixel with full standard parameters required by Meta
       if (typeof window !== "undefined" && typeof window.fbq === "function") {
         try {
           window.fbq("track", "Purchase", {
-            value: 49,
+            value: typeof verifyData.amountPaid === "number" && verifyData.amountPaid > 0 ? Number(verifyData.amountPaid.toFixed(2)) : 49.00,
             currency: "INR",
+            content_type: "product",
             content_name: `Celebration Page: ${verifyData.slug}`,
+            content_ids: [verifyData.slug || "celebration_page"],
+            num_items: 1,
           });
         } catch (e) {}
       }
@@ -146,13 +149,16 @@ export default function RazorpayCheckoutModal({
         throw new Error(orderData.error || "Failed to create payment order.");
       }
 
-      // Track InitiateCheckout in Meta Pixel
+      // Track InitiateCheckout in Meta Pixel with standard parameters
       if (typeof window !== "undefined" && typeof window.fbq === "function") {
         try {
           window.fbq("track", "InitiateCheckout", {
-            value: 49,
-            currency: "INR",
+            value: orderData.amount ? Number((orderData.amount / 100).toFixed(2)) : 49.00,
+            currency: orderData.currency || "INR",
+            content_type: "product",
             content_name: `Celebration Page: ${personName}`,
+            content_ids: ["celebration_page"],
+            num_items: 1,
           });
         } catch (e) {}
       }
