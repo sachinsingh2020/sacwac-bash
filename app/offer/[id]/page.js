@@ -41,6 +41,7 @@ function ExclusiveOfferContent() {
   const [purchasing, setPurchasing] = useState(false);
   const [purchaseError, setPurchaseError] = useState("");
   const [publishedSlug, setPublishedSlug] = useState("");
+  const [showPurchaseCelebration, setShowPurchaseCelebration] = useState(false);
   const [copied, setCopied] = useState(false);
 
   // Fetch template data
@@ -214,6 +215,7 @@ function ExclusiveOfferContent() {
             }
 
             setIsPreviewOpen(false);
+            setShowPurchaseCelebration(true);
             setPublishedSlug(verifyData.slug);
           } catch (err) {
             console.error("Verification error:", err);
@@ -304,6 +306,47 @@ function ExclusiveOfferContent() {
             </Link>
           </div>
         ) : publishedSlug ? (
+          showPurchaseCelebration ? (
+            <div className="offer-success-box purchase-celebration-card">
+              <span className="purchase-celebration-icons">🎉🎂💖</span>
+              <div className="purchase-celebration-badge-pill">
+                ✓ Payment Successful &amp; Activated
+              </div>
+              <h2 className="purchase-celebration-title">
+                You have successfully bought a birthday wish for your loved one!
+              </h2>
+              <p className="purchase-celebration-desc">
+                Your personalized interactive celebration surprise for <strong>{celebrantName || "someone special"}</strong> is now officially unlocked and ready to bring them tears of joy.
+              </p>
+
+              <div className="purchase-celebration-info-box">
+                <div className="purchase-info-row">
+                  <span className="purchase-info-icon">🎁</span>
+                  <span><strong>Celebrant:</strong> {celebrantName || "Someone Special"}</span>
+                </div>
+                <div className="purchase-info-row">
+                  <span className="purchase-info-icon">✨</span>
+                  <span><strong>Includes:</strong> Interactive cake, music, photo gallery, heartfelt letter &amp; wishes</span>
+                </div>
+                <div className="purchase-info-row">
+                  <span className="purchase-info-icon">🔒</span>
+                  <span><strong>Access:</strong> Permanent link with lifetime access</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="purchase-celebration-next-btn"
+                onClick={() => {
+                  setShowPurchaseCelebration(false);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              >
+                <span>Next</span>
+                <span>→</span>
+              </button>
+            </div>
+          ) : (
           /* SUCCESS STATE: Already published celebration */
           <div className="offer-success-box">
             <span className="offer-success-trophy">🎉</span>
@@ -355,6 +398,7 @@ function ExclusiveOfferContent() {
               </Link>
             </div>
           </div>
+          )
         ) : (
           /* OFFER DETAILS & ACTIONS */
           <>
