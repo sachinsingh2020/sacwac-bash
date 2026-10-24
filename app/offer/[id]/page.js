@@ -342,8 +342,8 @@ function ExclusiveOfferContent() {
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
               >
-                <span>Next</span>
-                <span>→</span>
+                <span>Get Celebration Link</span>
+                <span>✨</span>
               </button>
             </div>
           ) : (
