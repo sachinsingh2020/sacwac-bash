@@ -103,7 +103,7 @@ export default function RazorpayCheckoutModal({
       if (typeof window !== "undefined" && typeof window.fbq === "function") {
         try {
           window.fbq("track", "Purchase", {
-            value: 49.00,
+            value: typeof verifyData.amountPaid === "number" && verifyData.amountPaid > 0 ? Number(verifyData.amountPaid.toFixed(2)) : 49.00,
             currency: "INR",
             content_type: "product",
             content_name: `Celebration Page: ${verifyData.slug}`,
@@ -153,8 +153,8 @@ export default function RazorpayCheckoutModal({
       if (typeof window !== "undefined" && typeof window.fbq === "function") {
         try {
           window.fbq("track", "InitiateCheckout", {
-            value: 49.00,
-            currency: "INR",
+            value: orderData.amount ? Number((orderData.amount / 100).toFixed(2)) : 49.00,
+            currency: orderData.currency || "INR",
             content_type: "product",
             content_name: `Celebration Page: ${personName}`,
             content_ids: ["celebration_page"],

@@ -195,6 +195,7 @@ export async function POST(request) {
       success: true,
       slug: page.slug,
       id: page.slug,
+      amountPaid: paymentAmount,
     });
   } catch (error) {
     console.error('Payment verification / save failed:', error);
