@@ -746,7 +746,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
                     <p>
                       {buyerMonthFilter !== "all"
                         ? "There were no completed orders recorded in this month. You can select another month or view all months."
-                        : "When visitors complete their ₹49 or ₹199 purchase, their details and live links will appear here permanently."}
+                        : "When visitors complete their ₹99 or ₹199 purchase, their details and live links will appear here permanently."}
                     </p>
                     {buyerMonthFilter !== "all" && (
                       <button
@@ -863,7 +863,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
                                             ? "#dc2626"
                                             : b.amountPaid === 39
                                             ? "#be185d"
-                                            : b.amountPaid === 49
+                                            : b.amountPaid === 49 || b.amountPaid === 99
                                             ? "#d95775"
                                             : "#16a34a",
                                         fontSize: "14px",
@@ -882,7 +882,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
                                             ? "#fee2e2"
                                             : b.amountPaid === 39
                                             ? "#fce7f3"
-                                            : b.amountPaid === 49
+                                            : b.amountPaid === 49 || b.amountPaid === 99
                                             ? "#fff0f3"
                                             : "#f0fdf4",
                                         color:
@@ -890,7 +890,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
                                             ? "#b91c1c"
                                             : b.amountPaid === 39
                                             ? "#be185d"
-                                            : b.amountPaid === 49
+                                            : b.amountPaid === 49 || b.amountPaid === 99
                                             ? "#d95775"
                                             : "#166534",
                                         border:
@@ -898,7 +898,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
                                             ? "1px solid #fca5a5"
                                             : b.amountPaid === 39
                                             ? "1px solid #fbcfe8"
-                                            : b.amountPaid === 49
+                                            : b.amountPaid === 49 || b.amountPaid === 99
                                             ? "1px solid #ffd6e1"
                                             : "1px solid #bbf7d0",
                                       }}
@@ -908,7 +908,9 @@ export default function VisitorAnalyticsView({ adminToken }) {
                                         : b.amountPaid === 39
                                         ? "Special Offer (₹39)"
                                         : b.amountPaid === 49
-                                        ? "Login (₹49)"
+                                        ? "Promo (₹49)"
+                                        : b.amountPaid === 99
+                                        ? "Celebration (₹99)"
                                         : "Standard (₹199)"}
                                     </span>
                                   </div>

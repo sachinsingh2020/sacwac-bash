@@ -87,7 +87,7 @@ export default function PrivacyPolicyPage() {
           <p>We use collected data solely for:</p>
           <ul>
             <li>Generating your personalized interactive celebration surprise page.</li>
-            <li>Authenticating your session and providing discounted member pricing (₹49 tier vs ₹199 non-login tier).</li>
+            <li>Authenticating your session and providing discounted member pricing (₹99 tier vs ₹199 non-login tier).</li>
             <li>Sending transactional notices (e.g., payment confirmation receipts and optional milestone reminders).</li>
             <li>Diagnosing technical issues, preventing fraud, and optimizing system uptime.</li>
           </ul>
