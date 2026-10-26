@@ -5,6 +5,7 @@ import { connectToDatabase } from '../../../../lib/db';
 import BirthdayPage from '../../../../models/BirthdayPage';
 import AbandonedTemplate from '../../../../models/AbandonedTemplate';
 import { verifyToken } from '../../../../lib/jwt';
+import { trackMetaServerEvent } from '../../../../lib/metaCapi';
 
 export const dynamic = 'force-dynamic';
 
@@ -189,6 +190,28 @@ export async function POST(request) {
       } catch (err) {
         console.warn('Failed to mark template as converted:', err.message);
       }
+    }
+
+    // Send Meta Conversions API (CAPI) Purchase event for 100% reliable tracking & deduplication
+    try {
+      await trackMetaServerEvent({
+        eventName: 'Purchase',
+        eventId: razorpay_payment_id,
+        eventSourceUrl: request.headers.get('referer') || `https://magicmoments0.online/${page.slug}`,
+        userEmail,
+        userPhone: body.userPhone || data.phone || '',
+        customData: {
+          currency: 'INR',
+          value: Number(Number(paymentAmount).toFixed(2)),
+          content_type: 'product',
+          content_name: `Celebration Page: ${page.slug}`,
+          content_ids: [page.slug],
+          num_items: 1,
+        },
+        request,
+      });
+    } catch (capiErr) {
+      console.warn('Meta CAPI purchase dispatch warning:', capiErr?.message || capiErr);
     }
 
     return NextResponse.json({

@@ -210,7 +210,7 @@ function ExclusiveOfferContent() {
                   content_name: `Celebration Page: ${verifyData.slug}`,
                   content_ids: [verifyData.slug || "celebration_page"],
                   num_items: 1,
-                });
+                }, { eventID: response.razorpay_payment_id });
               } catch (e) {}
             }
 

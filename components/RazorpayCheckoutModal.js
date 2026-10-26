@@ -99,7 +99,7 @@ export default function RazorpayCheckoutModal({
         throw new Error(verifyData.error || "Payment verification failed.");
       }
 
-      // Track Purchase in Meta Pixel with full standard parameters required by Meta
+      // Track Purchase in Meta Pixel with full standard parameters and eventID for CAPI deduplication
       if (typeof window !== "undefined" && typeof window.fbq === "function") {
         try {
           window.fbq("track", "Purchase", {
@@ -109,7 +109,7 @@ export default function RazorpayCheckoutModal({
             content_name: `Celebration Page: ${verifyData.slug}`,
             content_ids: [verifyData.slug || "celebration_page"],
             num_items: 1,
-          });
+          }, { eventID: paymentDetails.razorpay_payment_id });
         } catch (e) {}
       }
 
