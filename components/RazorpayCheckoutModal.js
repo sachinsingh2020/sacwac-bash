@@ -29,7 +29,7 @@ export default function RazorpayCheckoutModal({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [showExitWarning, setShowExitWarning] = useState(false);
-  const [animStep, setAnimStep] = useState(0); // 0: initial ₹199, 1: pen crossing out, 2: ₹49 revealed
+  const [animStep, setAnimStep] = useState(0); // 0: initial ₹299, 1: pen crossing out, 2: ₹99 revealed
   const [capturedPayment, setCapturedPayment] = useState(null);
 
   // Trigger fast pen-crossing animation when modal opens
@@ -48,7 +48,7 @@ export default function RazorpayCheckoutModal({
     }, 280);
 
     const timer2 = setTimeout(() => {
-      setAnimStep(2); // write ₹49
+      setAnimStep(2); // write ₹99
     }, 620);
 
     return () => {
@@ -103,7 +103,7 @@ export default function RazorpayCheckoutModal({
       if (typeof window !== "undefined" && typeof window.fbq === "function") {
         try {
           window.fbq("track", "Purchase", {
-            value: typeof verifyData.amountPaid === "number" && verifyData.amountPaid > 0 ? Number(verifyData.amountPaid.toFixed(2)) : 49.00,
+            value: typeof verifyData.amountPaid === "number" && verifyData.amountPaid > 0 ? Number(verifyData.amountPaid.toFixed(2)) : 99.00,
             currency: "INR",
             content_type: "product",
             content_name: `Celebration Page: ${verifyData.slug}`,
@@ -137,11 +137,11 @@ export default function RazorpayCheckoutModal({
         throw new Error("Unable to load Razorpay payment window. Please check your internet connection.");
       }
 
-      // 1. Create server-side order for ₹49
+      // 1. Create server-side order for ₹99
       const orderRes = await fetch("/api/razorpay/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currency: "INR", tier: "login", offerPrice: 49 }),
+        body: JSON.stringify({ currency: "INR", tier: "login", offerPrice: 99 }),
       });
 
       const orderData = await orderRes.json();
@@ -153,7 +153,7 @@ export default function RazorpayCheckoutModal({
       if (typeof window !== "undefined" && typeof window.fbq === "function") {
         try {
           window.fbq("track", "InitiateCheckout", {
-            value: orderData.amount ? Number((orderData.amount / 100).toFixed(2)) : 49.00,
+            value: orderData.amount ? Number((orderData.amount / 100).toFixed(2)) : 99.00,
             currency: orderData.currency || "INR",
             content_type: "product",
             content_name: `Celebration Page: ${personName}`,
@@ -230,13 +230,13 @@ export default function RazorpayCheckoutModal({
             </p>
           </div>
 
-          {/* Animated Pen-Crossing Price Card (199 -> crossed -> 49) */}
+          {/* Animated Pen-Crossing Price Card (299 -> crossed -> 99) */}
           <div className="animated-price-stage">
             <div className="price-tag-wrapper">
               <div className={`price-original-box ${animStep >= 1 ? "is-crossed" : ""}`}>
                 <span className="price-original-label">Regular Price</span>
                 <div className="price-strike-container">
-                  <span className="price-original-val">₹199</span>
+                  <span className="price-original-val">₹299</span>
                   {/* Pen Slash Graphic */}
                   <svg className={`pen-slash-svg ${animStep >= 1 ? "draw-slash" : ""}`} viewBox="0 0 100 30" preserveAspectRatio="none">
                     <path
@@ -256,18 +256,18 @@ export default function RazorpayCheckoutModal({
                 →
               </div>
 
-              {/* Discounted ₹49 Reveal */}
+              {/* Discounted ₹99 Reveal */}
               <div className={`price-discounted-box ${animStep >= 2 ? "pop-discount" : "hidden-discount"}`}>
                 <span className="price-discount-pill">Special Celebration Offer</span>
                 <div className="price-deal-row">
-                  <span className="price-deal-num">₹49</span>
+                  <span className="price-deal-num">₹99</span>
                   <span className="price-deal-tax">Only</span>
                 </div>
               </div>
             </div>
 
             <div className={`price-savings-toast ${animStep >= 2 ? "show-savings" : ""}`}>
-              🎉 You save <strong>₹150 (75% OFF)</strong> today!
+              🎉 You save <strong>₹200 (67% OFF)</strong> today!
             </div>
           </div>
 
@@ -313,7 +313,7 @@ export default function RazorpayCheckoutModal({
               </>
             ) : (
               <>
-                <span>Pay ₹49 &amp; Get Shareable Link</span>
+                <span>Pay ₹99 &amp; Get Shareable Link</span>
                 <span className="checkout-btn-arrow">→</span>
               </>
             )}
@@ -330,9 +330,9 @@ export default function RazorpayCheckoutModal({
         <div className="checkout-exit-overlay" onClick={() => setShowExitWarning(false)}>
           <div className="checkout-exit-card" onClick={(e) => e.stopPropagation()}>
             <span className="checkout-exit-icon">✨</span>
-            <h3>Keep this special ₹49 price?</h3>
+            <h3>Keep this special ₹99 price?</h3>
             <p>
-              Your celebration surprise for <strong>{personName}</strong> is ready to share. If you leave now, you might miss this limited ₹49 rate.
+              Your celebration surprise for <strong>{personName}</strong> is ready to share. If you leave now, you might miss this limited ₹99 rate.
             </p>
             <div className="checkout-exit-buttons">
               <button
@@ -340,7 +340,7 @@ export default function RazorpayCheckoutModal({
                 className="checkout-exit-btn-resume"
                 onClick={() => setShowExitWarning(false)}
               >
-                Claim for ₹49 &amp; Continue 💖
+                Claim for ₹99 &amp; Continue 💖
               </button>
               <button
                 type="button"

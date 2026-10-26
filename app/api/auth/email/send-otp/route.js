@@ -39,7 +39,7 @@ export async function POST(request) {
           <p style="color: #8b6b77; font-size: 14px; margin: 0;">Your Verification Code</p>
         </div>
         <p style="color: #442a34; font-size: 15px; line-height: 1.6; margin-bottom: 24px;">
-          Use the 6-digit code below to sign in and unlock your special member discount (₹49 celebration link):
+          Use the 6-digit code below to sign in and unlock your special member discount (₹99 celebration link):
         </p>
         <div style="background: #fff5f7; border: 2px dashed #f5a9bc; border-radius: 14px; padding: 20px; text-align: center; margin-bottom: 24px;">
           <span style="font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #d95775; font-family: monospace;">${code}</span>
