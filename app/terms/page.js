@@ -44,7 +44,7 @@ export default function TermsPage() {
             </li>
             <li>
               <strong>Member Purchase (With Login):</strong> Users who sign in using Google OAuth or verified email
-              receive exclusive discounted creator pricing (₹99) and have access to draft management.
+              receive exclusive discounted creator pricing (₹49) and have access to draft management.
             </li>
           </ul>
           <p>

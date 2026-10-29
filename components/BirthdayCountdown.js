@@ -299,7 +299,7 @@ export default function BirthdayCountdown({
               title="Unlock and generate official link"
               aria-label="Unlock and generate official link"
             >
-              <span>⚡</span> Unlock (₹99)
+              <span>⚡</span> Unlock (₹49)
             </button>
           )}
         </div>

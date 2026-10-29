@@ -72,7 +72,7 @@ export async function POST(request) {
     }
 
     // 2. Query Razorpay API directly to get the verified payment amount and status
-    let paymentAmount = tier === 'offer29' ? 29 : tier === 'offer39' ? 39 : tier === 'login' ? 99 : 199;
+    let paymentAmount = tier === 'offer29' ? 29 : tier === 'offer39' ? 39 : tier === 'login' ? 49 : 199;
     if (key_id && key_secret) {
       try {
         const razorpay = new Razorpay({ key_id, key_secret });

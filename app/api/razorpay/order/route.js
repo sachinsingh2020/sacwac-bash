@@ -20,7 +20,7 @@ export async function POST(request) {
     const reqCurrency = (body.currency || 'INR').toUpperCase();
     const config = CURRENCY_CONFIG[reqCurrency] || CURRENCY_CONFIG.INR;
 
-    // Pricing options: "offer29" (₹29), "offer39" (₹39), "login" (₹99), or "guest" (₹199)
+    // Pricing options: "offer29" (₹29), "offer39" (₹39), "login" (₹49), or "guest" (₹199)
     const offerPrice = Number(body.offerPrice || body.customPrice);
     let tier = body.tier || 'guest';
     let amount = config.amount; // default 19900 paise
@@ -31,8 +31,8 @@ export async function POST(request) {
     } else if (offerPrice === 39 || tier === 'offer39' || body.offer === '39') {
       amount = 3900; // ₹39 in paise
       tier = 'offer39';
-    } else if ((tier === 'login' || body.offer === '99' || offerPrice === 99 || body.offer === '49') && reqCurrency === 'INR') {
-      amount = 9900; // ₹99 in paise
+    } else if ((tier === 'login' || body.offer === '49' || offerPrice === 49) && reqCurrency === 'INR') {
+      amount = 4900; // ₹49 in paise
       tier = 'login';
     }
 
@@ -54,7 +54,7 @@ export async function POST(request) {
           : tier === 'offer39'
           ? 'Special Exclusive Discount (₹39)'
           : tier === 'login'
-          ? 'Celebration Unlock (₹99)'
+          ? 'Celebration Unlock (₹49)'
           : 'Standard Unlock (₹199)',
         tier,
         region: config.regionName,
