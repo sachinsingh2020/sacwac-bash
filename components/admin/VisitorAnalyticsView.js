@@ -746,7 +746,7 @@ export default function VisitorAnalyticsView({ adminToken }) {
                     <p>
                       {buyerMonthFilter !== "all"
                         ? "There were no completed orders recorded in this month. You can select another month or view all months."
-                        : "When visitors complete their ₹99 or ₹199 purchase, their details and live links will appear here permanently."}
+                        : "When visitors complete their ₹49 or ₹199 purchase, their details and live links will appear here permanently."}
                     </p>
                     {buyerMonthFilter !== "all" && (
                       <button
@@ -908,9 +908,9 @@ export default function VisitorAnalyticsView({ adminToken }) {
                                         : b.amountPaid === 39
                                         ? "Special Offer (₹39)"
                                         : b.amountPaid === 49
-                                        ? "Promo (₹49)"
+                                        ? "Celebration (₹49)"
                                         : b.amountPaid === 99
-                                        ? "Celebration (₹99)"
+                                        ? "Special (₹99)"
                                         : "Standard (₹199)"}
                                     </span>
                                   </div>
